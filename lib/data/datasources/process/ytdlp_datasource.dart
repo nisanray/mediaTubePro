@@ -24,6 +24,7 @@ class YtDlpDatasource {
     bool extractAudio = false,
     bool singleVideoOnly = true,
   }) async* {
+    Process? startedProcess;
     final safeQualityLabel = _sanitizeFilenamePart(qualityLabel);
     final safeAppName = _sanitizeFilenamePart(_appName);
     List<String> args = [
@@ -74,23 +75,21 @@ class YtDlpDatasource {
         }
       }
 
-      _process = await Process.start(ytDlpPath, args);
+      final process = await Process.start(ytDlpPath, args);
+      startedProcess = process;
+      _process = process;
 
       // Merge stdout and stderr into a single stream of lines
       final stream = StreamGroup.merge([
-        _process!.stdout
-            .transform(utf8.decoder)
-            .transform(const LineSplitter()),
-        _process!.stderr
-            .transform(utf8.decoder)
-            .transform(const LineSplitter()),
+        process.stdout.transform(utf8.decoder).transform(const LineSplitter()),
+        process.stderr.transform(utf8.decoder).transform(const LineSplitter()),
       ]);
 
       await for (final line in stream) {
         yield line;
       }
 
-      final exitCode = await _process!.exitCode;
+      final exitCode = await process.exitCode;
       if (exitCode != 0) {
         yield '[EXEC_ERROR] yt-dlp exited with code $exitCode. Check the log file for details or verify your custom yt-dlp/FFmpeg paths.';
       } else {
@@ -102,12 +101,77 @@ class YtDlpDatasource {
       yield '[BINARY_ERROR] yt-dlp/FFmpeg file access failed: ${e.message}. Check permissions and the selected binary path.';
     } catch (e) {
       yield '[FATAL] Unexpected download failure: $e';
+    } finally {
+      final process = startedProcess;
+      if (process != null) {
+        if (identical(_process, process)) {
+          _process = null;
+        }
+      }
     }
   }
 
   void cancel() {
-    _process?.kill();
+    final process = _process;
     _process = null;
+    if (process == null) return;
+
+    _killProcessTree(process);
+  }
+
+  void _killProcessTree(Process process) {
+    final pid = process.pid;
+
+    if (Platform.isWindows) {
+      unawaited(
+        Process.run('taskkill', ['/PID', '$pid', '/T', '/F']).catchError((_) {
+          try {
+            process.kill(ProcessSignal.sigkill);
+          } catch (_) {}
+        }),
+      );
+      return;
+    }
+
+    // Unix/macOS: explicitly terminate child processes (e.g. ffmpeg)
+    // spawned by yt-dlp before killing the parent process.
+    unawaited(
+      Process.run('pkill', [
+        '-TERM',
+        '-P',
+        '$pid',
+      ]).catchError((_) {}).whenComplete(() {
+        final terminated = process.kill(ProcessSignal.sigterm);
+        if (!terminated) {
+          try {
+            process.kill(ProcessSignal.sigkill);
+          } catch (_) {}
+          return;
+        }
+
+        unawaited(
+          process.exitCode
+              .timeout(
+                const Duration(milliseconds: 400),
+                onTimeout: () {
+                  unawaited(
+                    Process.run('pkill', [
+                      '-KILL',
+                      '-P',
+                      '$pid',
+                    ]).catchError((_) {}),
+                  );
+                  try {
+                    process.kill(ProcessSignal.sigkill);
+                  } catch (_) {}
+                  return -1;
+                },
+              )
+              .catchError((_) {}),
+        );
+      }),
+    );
+    return;
   }
 
   String _sanitizeFilenamePart(String value) {
