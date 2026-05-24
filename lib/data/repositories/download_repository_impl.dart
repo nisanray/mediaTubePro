@@ -28,6 +28,7 @@ class DownloadRepositoryImpl {
     String format,
     String qualityLabel, {
     bool extractAudio = false,
+    bool singleVideoOnly = true,
   }) async* {
     DownloadTask currentTask = initialTask.copyWith(
       status: DownloadStatus.downloading,
@@ -49,6 +50,7 @@ class DownloadRepositoryImpl {
       qualityFormat: format,
       qualityLabel: qualityLabel,
       extractAudio: extractAudio,
+      singleVideoOnly: singleVideoOnly,
     );
 
     await for (final line in outputStream) {

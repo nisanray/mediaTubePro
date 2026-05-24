@@ -22,6 +22,7 @@ class YtDlpDatasource {
     required String qualityFormat,
     required String qualityLabel,
     bool extractAudio = false,
+    bool singleVideoOnly = true,
   }) async* {
     final safeQualityLabel = _sanitizeFilenamePart(qualityLabel);
     final safeAppName = _sanitizeFilenamePart(_appName);
@@ -40,6 +41,12 @@ class YtDlpDatasource {
       args.addAll(['-x', '--audio-format', 'mp3', '--audio-quality', '320K']);
     } else {
       args.addAll(['-f', qualityFormat, '--merge-output-format', 'mkv']);
+    }
+
+    if (singleVideoOnly) {
+      args.add('--no-playlist');
+    } else {
+      args.add('--yes-playlist');
     }
 
     if (ffmpegPath.isNotEmpty) {

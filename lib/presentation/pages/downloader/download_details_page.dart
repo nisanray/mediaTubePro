@@ -42,6 +42,12 @@ class DownloadDetailsPage extends StatelessWidget {
                     children: [
                       Chip(label: Text(task.status.name)),
                       const SizedBox(width: 8),
+                      Chip(
+                        label: Text(
+                          task.singleVideoOnly ? 'Single video' : 'Playlist',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       // Show progress and current speed instead of undefined fields
                       Text('${(task.progress * 100).toInt()}%'),
                       const SizedBox(width: 12),

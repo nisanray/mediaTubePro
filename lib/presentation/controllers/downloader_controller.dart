@@ -16,6 +16,7 @@ class DownloaderController extends GetxController {
 
   final urlController = TextEditingController();
   final RxString currentUrl = ''.obs;
+  final RxBool singleVideoOnly = true.obs;
 
   // Replace the mock map with our strongly-typed Domain Entity
   final RxList<DownloadTask> downloadQueue = <DownloadTask>[].obs;
@@ -68,6 +69,7 @@ class DownloaderController extends GetxController {
       id: const Uuid().v4(),
       url: currentUrl.value,
       status: DownloadStatus.pending,
+      singleVideoOnly: singleVideoOnly.value,
     );
 
     downloadQueue.insert(0, newTask);
@@ -105,6 +107,7 @@ class DownloaderController extends GetxController {
           qualityFormat,
           qualityLabel,
           extractAudio: extractAudio,
+          singleVideoOnly: task.singleVideoOnly,
         )
         .listen(
           (updatedTask) {

@@ -1,7 +1,7 @@
 # TODO
 
 ## Immediate
-- [ ] Add support for single YouTube video downloads
+- [x] Add support for single YouTube video downloads
 - [ ] Verify the queue handles one video without playlist assumptions
 - [ ] Commit the todo/spec update
 

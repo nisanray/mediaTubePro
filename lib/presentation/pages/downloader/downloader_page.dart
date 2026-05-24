@@ -10,6 +10,7 @@ import '../../controllers/logs_controller.dart';
 import 'dart:io';
 import '../../widgets/main_right_sidebar.dart';
 import '../../widgets/shared/mac_button.dart';
+import '../../widgets/shared/mac_switch.dart';
 import '../../widgets/shared/mac_text_field.dart';
 
 class DownloaderPage extends StatelessWidget {
@@ -167,6 +168,56 @@ class DownloaderPage extends StatelessWidget {
                             onPressed: controller.addToQueue,
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Download mode
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.outlineVariant),
+                      ),
+                      child: Obx(
+                        () => Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Single video mode',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    controller.singleVideoOnly.value
+                                        ? 'Downloads one video and ignores playlist entries.'
+                                        : 'Allows yt-dlp to follow playlist URLs.',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            MacSwitch(
+                              value: controller.singleVideoOnly.value,
+                              onChanged: (value) {
+                                controller.singleVideoOnly.value = value;
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),

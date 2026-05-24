@@ -14,6 +14,7 @@ class DownloadTask {
   final List<DownloadTask>? items; // for playlist entries
   final String? channel;
   final String? thumbnail;
+  final bool singleVideoOnly;
 
   DownloadTask({
     required this.id,
@@ -29,6 +30,7 @@ class DownloadTask {
     this.items,
     this.channel,
     this.thumbnail,
+    this.singleVideoOnly = true,
   });
 
   DownloadTask copyWith({
@@ -43,6 +45,7 @@ class DownloadTask {
     List<DownloadTask>? items,
     String? channel,
     String? thumbnail,
+    bool? singleVideoOnly,
   }) {
     return DownloadTask(
       id: id,
@@ -58,6 +61,7 @@ class DownloadTask {
       items: items ?? this.items,
       channel: channel ?? this.channel,
       thumbnail: thumbnail ?? this.thumbnail,
+      singleVideoOnly: singleVideoOnly ?? this.singleVideoOnly,
     );
   }
 
@@ -76,6 +80,7 @@ class DownloadTask {
       'items': items?.map((e) => e.toJson()).toList(),
       'channel': channel,
       'thumbnail': thumbnail,
+      'singleVideoOnly': singleVideoOnly,
     };
   }
 
@@ -96,6 +101,7 @@ class DownloadTask {
           .toList(),
       channel: json['channel'] as String?,
       thumbnail: json['thumbnail'] as String?,
+      singleVideoOnly: json['singleVideoOnly'] as bool? ?? true,
     );
   }
 }
