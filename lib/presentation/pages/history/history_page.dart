@@ -633,7 +633,7 @@ class HistoryPage extends StatelessWidget {
                     if (downloader != null) {
                       // Use controller API to queue the retry so scheduling works as expected
                       downloader.urlController.text = item['url'] ?? '';
-                      downloader.addToQueue();
+                      await downloader.addToQueue();
                       Get.snackbar(
                         'Retry',
                         'Queued for retry',

@@ -10,8 +10,8 @@
 - [ ]checking existing video if presents (options like android 1dm app)
 
 ## Next TODOs
-- [ ] Add fallback when URL detection is unknown (ask Single or Playlist before queueing)
-- [ ] Add optional manual override as a per-add action (not always visible in UI)
+- [x] Add fallback when URL detection is unknown (ask Single or Playlist before queueing)
+- [x] Add optional manual override as a per-add action (not always visible in UI)
 - [ ] Add tests for detection edge cases (watch+list, short links, unknown hosts)
 - [ ] Add cancellation race-condition tests for queue state updates
 - [ ] Fix log loading performance: prevent UI not-responding/freezing when opening logs

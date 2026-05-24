@@ -190,24 +190,80 @@ class DownloaderPage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 12),
+                              PopupMenuButton<String?>(
+                                tooltip: 'Override next add',
+                                onSelected: controller.setNextAddOverrideKind,
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem<String?>(
+                                    value: '',
+                                    child: Text('Auto detect (default)'),
+                                  ),
+                                  PopupMenuItem<String?>(
+                                    value: 'single',
+                                    child: Text('Force single for next add'),
+                                  ),
+                                  PopupMenuItem<String?>(
+                                    value: 'playlist',
+                                    child: Text('Force playlist for next add'),
+                                  ),
+                                ],
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainerLow,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: AppColors.outlineVariant,
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.tune, size: 16),
+                                      SizedBox(width: 6),
+                                      Text('Mode'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               MacButton(
                                 text: 'Add to Queue',
                                 isPrimary: true,
-                                onPressed: controller.addToQueue,
+                                onPressed: () {
+                                  controller.addToQueue();
+                                },
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Obx(() {
                             final kind = controller.detectedUrlKind.value;
-                            if (kind.isEmpty) {
+                            final override =
+                                controller.nextAddOverrideKind.value;
+                            if (kind.isEmpty && override.isEmpty) {
                               return const SizedBox.shrink();
                             }
-                            final label = kind == 'playlist'
-                                ? 'Detected: Playlist URL (playlist mode enabled)'
-                                : 'Detected: Single-video URL (single mode enabled)';
+                            final parts = <String>[];
+                            if (kind.isNotEmpty) {
+                              parts.add(
+                                kind == 'playlist'
+                                    ? 'Detected: Playlist URL (playlist mode enabled)'
+                                    : 'Detected: Single-video URL (single mode enabled)',
+                              );
+                            }
+                            if (override.isNotEmpty) {
+                              parts.add(
+                                override == 'playlist'
+                                    ? 'Override next add: Playlist'
+                                    : 'Override next add: Single video',
+                              );
+                            }
                             return Text(
-                              label,
+                              parts.join(' • '),
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.onSurfaceVariant,
@@ -720,7 +776,7 @@ class DownloaderPage extends StatelessWidget {
                       value: 'open',
                       child: Text('Open Folder'),
                     ),
-                  if (isDownloading || item.status == DownloadStatus.pending)
+                  if (!isDone && !isCancelled)
                     const PopupMenuItem(value: 'cancel', child: Text('Cancel')),
                   if (isCancelled)
                     const PopupMenuItem(value: 'resume', child: Text('Resume')),

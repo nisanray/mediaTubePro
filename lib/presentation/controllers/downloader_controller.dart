@@ -18,6 +18,7 @@ class DownloaderController extends GetxController {
   final RxString currentUrl = ''.obs;
   final RxBool singleVideoOnly = true.obs;
   final RxString detectedUrlKind = ''.obs;
+  final RxString nextAddOverrideKind = ''.obs;
 
   // Replace the mock map with our strongly-typed Domain Entity
   final RxList<DownloadTask> downloadQueue = <DownloadTask>[].obs;
@@ -66,17 +67,27 @@ class DownloaderController extends GetxController {
     });
   }
 
-  void addToQueue() {
+  Future<void> addToQueue() async {
     final normalizedUrl = currentUrl.value.trim();
     if (normalizedUrl.isEmpty) return;
 
+    final overrideKind = nextAddOverrideKind.value.trim();
     final detectedKind = _detectUrlKind(normalizedUrl);
-    final isSingle = detectedKind == null
-        ? singleVideoOnly.value
-        : detectedKind != 'playlist';
+    final selectedKind = overrideKind.isNotEmpty
+        ? overrideKind
+        : (detectedKind ?? await _promptUnknownUrlKind());
+    if (selectedKind == null) return;
+
+    final isSingle = selectedKind != 'playlist';
+    if (singleVideoOnly.value != isSingle) {
+      singleVideoOnly.value = isSingle;
+    }
+
     final detectionMeta = <String, dynamic>{
-      'kind': detectedKind ?? (isSingle ? 'single' : 'playlist'),
-      'source': detectedKind == null ? 'manual' : 'auto',
+      'kind': selectedKind,
+      'source': overrideKind.isNotEmpty
+          ? 'override'
+          : (detectedKind == null ? 'prompt' : 'auto'),
       'detectedAt': DateTime.now().toIso8601String(),
     };
 
@@ -91,9 +102,40 @@ class DownloaderController extends GetxController {
     downloadQueue.insert(0, newTask);
     urlController.clear();
     detectedUrlKind.value = '';
+    nextAddOverrideKind.value = '';
 
     // Try to schedule downloads according to concurrency limits
     _scheduleNext();
+  }
+
+  void setNextAddOverrideKind(String? kind) {
+    nextAddOverrideKind.value = (kind ?? '').trim();
+  }
+
+  Future<String?> _promptUnknownUrlKind() async {
+    return Get.dialog<String>(
+      AlertDialog(
+        title: const Text('Choose link type'),
+        content: const Text(
+          'Could not auto-detect this URL. Download as single video or playlist?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back<String?>(result: null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: 'playlist'),
+            child: const Text('Playlist'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: 'single'),
+            child: const Text('Single'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
   }
 
   void _startDownload(DownloadTask task) {
