@@ -129,12 +129,51 @@ class DownloaderPage extends StatelessWidget {
                             MacButton(
                               text: 'Clear Cancelled',
                               icon: Icons.remove_circle_outline,
-                              onPressed: () {
+                              onPressed: () async {
                                 final ctrl = Get.find<DownloaderController>();
-                                ctrl.clearCancelledTasks();
+                                final mode = await showDialog<String>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text(
+                                      'Clear cancelled downloads',
+                                    ),
+                                    content: const Text(
+                                      'Choose whether to clear only queue entries or also delete downloaded/partial files for cancelled tasks.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, 'queue_only'),
+                                        child: const Text('Queue only'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, 'delete_files'),
+                                        child: const Text('Delete files too'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (mode == null) return;
+
+                                final result = await ctrl.clearCancelledTasks(
+                                  deleteFiles: mode == 'delete_files',
+                                );
+                                final cleared = result['clearedTasks'] ?? 0;
+                                final deletedFiles =
+                                    result['deletedFiles'] ?? 0;
+                                final deletedLogs = result['deletedLogs'] ?? 0;
+
                                 Get.snackbar(
                                   'Queue',
-                                  'Cleared cancelled downloads',
+                                  mode == 'delete_files'
+                                      ? 'Cleared $cleared cancelled downloads, deleted $deletedFiles files and $deletedLogs logs'
+                                      : 'Cleared $cleared cancelled downloads from queue',
                                   snackPosition: SnackPosition.BOTTOM,
                                 );
                               },

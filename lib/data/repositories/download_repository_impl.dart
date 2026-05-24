@@ -331,8 +331,8 @@ class DownloadRepositoryImpl {
     return 'Download failed. Open the log file for more details.';
   }
 
-  void cancelDownload() {
-    _datasource.cancel();
+  void cancelDownload({bool forceKill = true}) {
+    _datasource.cancel(forceKill: forceKill);
   }
 
   String _decorateFilename(String baseFilename, String qualityLabel) {

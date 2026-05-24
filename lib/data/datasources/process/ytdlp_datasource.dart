@@ -111,12 +111,27 @@ class YtDlpDatasource {
     }
   }
 
-  void cancel() {
+  void cancel({bool forceKill = true}) {
     final process = _process;
     _process = null;
     if (process == null) return;
 
-    _killProcessTree(process);
+    if (forceKill) {
+      _killProcessTree(process);
+      return;
+    }
+
+    _terminateProcess(process);
+  }
+
+  void _terminateProcess(Process process) {
+    final terminated = process.kill(ProcessSignal.sigterm);
+    if (terminated) {
+      return;
+    }
+    try {
+      process.kill(ProcessSignal.sigkill);
+    } catch (_) {}
   }
 
   void _killProcessTree(Process process) {

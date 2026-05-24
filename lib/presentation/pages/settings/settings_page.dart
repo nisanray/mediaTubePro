@@ -114,6 +114,12 @@ class SettingsPage extends StatelessWidget {
             'Show alerts when done',
             controller.notifications,
           ),
+          const SizedBox(height: 12),
+          _buildToggleRow(
+            'Force Kill on Cancel',
+            'Instantly terminate yt-dlp + child processes',
+            controller.forceKillOnCancel,
+          ),
         ],
       ),
     );

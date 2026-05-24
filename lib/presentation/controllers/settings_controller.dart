@@ -10,6 +10,7 @@ class SettingsController extends GetxController {
   late final RxString defaultLocation;
   late final RxBool launchAtLogin;
   late final RxBool notifications;
+  late final RxBool forceKillOnCancel;
   late final RxString quality;
   late final RxString videoQualityMode;
   late final RxString format;
@@ -51,6 +52,7 @@ class SettingsController extends GetxController {
     );
     launchAtLogin = RxBool(_box.read('launchAtLogin') as bool? ?? false);
     notifications = RxBool(_box.read('notifications') as bool? ?? true);
+    forceKillOnCancel = RxBool(_box.read('forceKillOnCancel') as bool? ?? true);
     quality = RxString(_readOption('quality', qualityOptions, '1080p Premium'));
     videoQualityMode = RxString(
       _readOption(
@@ -77,6 +79,7 @@ class SettingsController extends GetxController {
     ever(defaultLocation, (value) => _box.write('defaultLocation', value));
     ever(launchAtLogin, (value) => _box.write('launchAtLogin', value));
     ever(notifications, (value) => _box.write('notifications', value));
+    ever(forceKillOnCancel, (value) => _box.write('forceKillOnCancel', value));
     ever(quality, (value) => _box.write('quality', value));
     ever(videoQualityMode, (value) => _box.write('videoQualityMode', value));
     ever(format, (value) => _box.write('format', value));
@@ -95,6 +98,7 @@ class SettingsController extends GetxController {
     defaultLocation.value = _defaultDownloadPath();
     launchAtLogin.value = false;
     notifications.value = true;
+    forceKillOnCancel.value = true;
     quality.value = '1080p Premium';
     videoQualityMode.value = 'Probing the video quality';
     format.value = 'MP4 (Most Compatible)';

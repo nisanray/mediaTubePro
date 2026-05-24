@@ -268,6 +268,12 @@ class DownloaderController extends GetxController {
   }
 
   void cancelAll() {
+    final settingsController = Get.isRegistered<SettingsController>()
+        ? Get.find<SettingsController>()
+        : null;
+    final forceKillOnCancel =
+        settingsController?.forceKillOnCancel.value ?? true;
+
     for (int i = 0; i < downloadQueue.length; i++) {
       final task = downloadQueue[i];
       if (task.status == DownloadStatus.downloading ||
@@ -292,13 +298,19 @@ class DownloaderController extends GetxController {
 
     for (final repo in _taskRepositories.values) {
       try {
-        repo.cancelDownload();
+        repo.cancelDownload(forceKill: forceKillOnCancel);
       } catch (_) {}
     }
     _taskRepositories.clear();
   }
 
   void cancelTask(String taskId) {
+    final settingsController = Get.isRegistered<SettingsController>()
+        ? Get.find<SettingsController>()
+        : null;
+    final forceKillOnCancel =
+        settingsController?.forceKillOnCancel.value ?? true;
+
     _cancelRequestedTaskIds.add(taskId);
 
     final sub = _activeDownloads[taskId];
@@ -311,7 +323,7 @@ class DownloaderController extends GetxController {
 
     final repo = _taskRepositories.remove(taskId);
     try {
-      repo?.cancelDownload();
+      repo?.cancelDownload(forceKill: forceKillOnCancel);
     } catch (_) {}
 
     final idx = downloadQueue.indexWhere((t) => t.id == taskId);
@@ -376,15 +388,101 @@ class DownloaderController extends GetxController {
     downloadQueue.removeWhere((t) => t.id == taskId);
   }
 
-  void clearCancelledTasks() {
-    final cancelledIds = downloadQueue
+  Future<Map<String, int>> clearCancelledTasks({
+    bool deleteFiles = false,
+  }) async {
+    final cancelledTasks = downloadQueue
         .where((t) => t.status == DownloadStatus.cancelled)
-        .map((t) => t.id)
         .toList();
-    for (final id in cancelledIds) {
-      _cancelRequestedTaskIds.remove(id);
+
+    int deletedFiles = 0;
+    int deletedLogs = 0;
+
+    if (deleteFiles && cancelledTasks.isNotEmpty) {
+      final settingsController = Get.isRegistered<SettingsController>()
+          ? Get.find<SettingsController>()
+          : null;
+      final outputFolder =
+          settingsController?.defaultLocation.value ??
+          r'C:\Users\Public\Downloads\MediaTube';
+
+      for (final task in cancelledTasks) {
+        final deleteResult = await _deleteTaskArtifacts(task, outputFolder);
+        deletedFiles += deleteResult['files'] ?? 0;
+        deletedLogs += deleteResult['logs'] ?? 0;
+      }
+    }
+
+    for (final task in cancelledTasks) {
+      _cancelRequestedTaskIds.remove(task.id);
     }
     downloadQueue.removeWhere((t) => t.status == DownloadStatus.cancelled);
+
+    return {
+      'clearedTasks': cancelledTasks.length,
+      'deletedFiles': deletedFiles,
+      'deletedLogs': deletedLogs,
+    };
+  }
+
+  Future<Map<String, int>> _deleteTaskArtifacts(
+    DownloadTask task,
+    String outputFolder,
+  ) async {
+    int filesDeleted = 0;
+    int logsDeleted = 0;
+
+    final filenames = <String>{};
+    void addFilename(String value) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty || trimmed == 'Resolving...') return;
+      filenames.add(trimmed);
+    }
+
+    addFilename(task.filename);
+    final items = task.items ?? const <DownloadTask>[];
+    for (final item in items) {
+      addFilename(item.filename);
+    }
+
+    for (final filename in filenames) {
+      final exactFile = File('$outputFolder\\$filename');
+      if (await exactFile.exists()) {
+        try {
+          await exactFile.delete();
+          filesDeleted++;
+        } catch (_) {}
+      }
+
+      final partFile = File('$outputFolder\\$filename.part');
+      if (await partFile.exists()) {
+        try {
+          await partFile.delete();
+          filesDeleted++;
+        } catch (_) {}
+      }
+
+      final ytdlFile = File('$outputFolder\\$filename.ytdl');
+      if (await ytdlFile.exists()) {
+        try {
+          await ytdlFile.delete();
+          filesDeleted++;
+        } catch (_) {}
+      }
+    }
+
+    final logPath = task.logPath;
+    if (logPath != null && logPath.isNotEmpty) {
+      final logFile = File(logPath);
+      if (await logFile.exists()) {
+        try {
+          await logFile.delete();
+          logsDeleted++;
+        } catch (_) {}
+      }
+    }
+
+    return {'files': filesDeleted, 'logs': logsDeleted};
   }
 
   void resumeAll() {

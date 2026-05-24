@@ -15,6 +15,44 @@
 - [ ] Add tests for detection edge cases (watch+list, short links, unknown hosts)
 - [ ] Add cancellation race-condition tests for queue state updates
 - [ ] Fix log loading performance: prevent UI not-responding/freezing when opening logs
+- [ ] Add "Delete files too" preview dialog with exact per-download file list before confirm
+
+### Delete-files preview detailed context
+- Current behavior: `Clear Cancelled -> Delete files too` only shows totals after delete (count of files/logs), not exact file names.
+- Required UX: before deleting, show a confirm dialog listing each cancelled task and the exact files that will be removed.
+- Include per task:
+	- Parent filename target(s): `filename`, `filename.part`, `filename.ytdl`
+	- Playlist child item targets with same suffix handling
+	- Log file path (if present)
+- Show per-file status in preview when possible:
+	- Exists (will delete)
+	- Missing (already gone)
+- Confirm actions:
+	- `Cancel`
+	- `Queue only` (no file deletion)
+	- `Delete listed files`
+- Post-action summary:
+	- Number of cancelled tasks cleared
+	- Number of files deleted
+	- Number of logs deleted
+	- Number of delete failures (if any)
+
+### Process lifecycle detailed context (cancel + completion)
+- Current requirement: when user cancels, downloader process must be killed immediately to avoid lag from lingering instances.
+- Must apply to both:
+	- Single video downloads
+	- Playlist downloads
+- Must also guarantee cleanup after natural finish/error:
+	- No lingering `yt-dlp` or child process remains after completion
+	- No lingering `ffmpeg` child process remains
+- Expected behavior:
+	- Cancel action: immediate process-tree termination (`/T /F` on Windows equivalent behavior)
+	- Complete/error action: explicit final cleanup of process handle/tree
+	- UI state should move to cancelled/done/error without delayed stale updates
+- Verification checklist:
+	- Repeated start/cancel cycles do not increase active background process count
+	- Completing multiple playlist items leaves no residual downloader instances
+	- App remains responsive while canceling active tasks
 
 ## Single-video support notes
 - Reuse the existing yt-dlp process flow in `lib/data/datasources/process/ytdlp_datasource.dart`.
@@ -33,3 +71,80 @@
 - Post-processing hooks for merge, audio extract, and cleanup.
 - Better failure handling with actionable error messages.
 - History, search, and filters for completed downloads.
+
+## Professional downloader UI actions checklist
+
+### Add / Capture
+- [ ] Paste URL and auto-detect type (single / playlist / channel)
+- [ ] Analyze link button to fetch title, duration, size, thumbnail before queueing
+- [ ] Select one item, full playlist, or range from playlist
+- [ ] Multi-link batch add (one link per line)
+- [ ] Detect duplicates and offer Skip / Redownload / Rename
+
+### Per-download actions
+- [ ] Start now / Queue for later
+- [ ] Pause
+- [ ] Resume
+- [ ] Cancel
+- [ ] Retry
+- [ ] Restart from zero
+- [ ] Open file
+- [ ] Open containing folder
+- [ ] Copy source URL
+- [ ] Copy file path
+- [ ] Rename output name
+- [ ] Change save folder for this item
+- [ ] Change quality/format for this item
+
+### Queue / list actions
+- [ ] Pause all
+- [ ] Resume all
+- [ ] Cancel all active
+- [ ] Clear finished
+- [ ] Clear cancelled
+- [ ] Reorder (move top / up / down / bottom)
+- [ ] Pin / prioritize selected item
+- [ ] Filter by status (all, active, queued, done, failed, cancelled)
+- [ ] Sort by added time, name, size, progress, speed
+- [ ] Bulk select and bulk actions
+
+### File cleanup and safety
+- [ ] Clear cancelled: queue-only option
+- [ ] Clear cancelled: delete files option
+- [ ] Preview exact files to delete before confirm
+- [ ] Show exists/missing status per file in preview
+- [ ] Show deletion result summary (deleted, skipped, failed)
+
+### Monitoring / details
+- [ ] Live progress %, speed, ETA, downloaded bytes, total size
+- [ ] Per-item detailed panel (metadata, command/options, output path)
+- [ ] Playlist child-item progress view
+- [ ] Real-time logs panel with search/copy/export
+- [ ] Error details panel with actionable hints
+
+### Quality / format controls
+- [ ] Quick presets (best, balanced, low data, audio-only)
+- [ ] Resolution picker (2160p/1440p/1080p/720p...)
+- [ ] Container picker (mp4/mkv/webm/mp3/m4a...)
+- [ ] Subtitle and language selection
+- [ ] Audio track/language selection
+
+### Post-processing options
+- [ ] Merge video+audio
+- [ ] Extract audio
+- [ ] Embed subtitles/metadata/thumbnail
+- [ ] Convert format after download
+- [ ] Keep or delete temp files
+
+### History / library
+- [ ] Completed downloads tab
+- [ ] Failed downloads tab
+- [ ] Re-download from history
+- [ ] Search history
+- [ ] Delete history entry (keep file / delete file)
+
+### App-level UX
+- [ ] Settings for default path, naming template, concurrency, bandwidth limit
+- [ ] Optional scheduler (start/stop time)
+- [ ] Optional notifications (start, complete, failed)
+- [ ] Theme-friendly and responsive layout (desktop + mobile)
