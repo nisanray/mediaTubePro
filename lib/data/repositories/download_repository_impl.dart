@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../../domain/entities/download_task.dart';
+import 'playlist_task_tracker.dart';
 import '../datasources/process/ytdlp_datasource.dart';
 
 class DownloadRepositoryImpl {
@@ -33,6 +34,7 @@ class DownloadRepositoryImpl {
     DownloadTask currentTask = initialTask.copyWith(
       status: DownloadStatus.downloading,
     );
+    final playlistTracker = PlaylistTaskTracker(currentTask.items);
     yield currentTask;
 
     // Prepare a per-task log file under application support
@@ -72,6 +74,16 @@ class DownloadRepositoryImpl {
         if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
           final decoded = jsonDecode(trimmed);
           if (decoded is Map) {
+            if (!singleVideoOnly) {
+              if (playlistTracker.upsertFromJson(decoded)) {
+                currentTask = currentTask.copyWith(
+                  items: playlistTracker.items,
+                  logPath: logPath,
+                );
+                yield currentTask;
+              }
+            }
+
             // Capture uploader/channel and thumbnail if present in yt-dlp JSON
             final uploader = decoded['uploader'] ?? decoded['uploader_id'];
             final thumbnail = decoded['thumbnail'];
@@ -93,6 +105,17 @@ class DownloadRepositoryImpl {
               final base = rawFname.toString().split('/').last.split('\\').last;
               final decorated = _decorateFilename(base, qualityLabel);
               currentTask = currentTask.copyWith(filename: decorated);
+              if (!singleVideoOnly &&
+                  playlistTracker.updateActiveItem(
+                    (item) => item.copyWith(
+                      filename: decorated,
+                      status: DownloadStatus.downloading,
+                    ),
+                  )) {
+                currentTask = currentTask.copyWith(
+                  items: playlistTracker.items,
+                );
+              }
               yield currentTask;
               continue;
             }
@@ -123,11 +146,41 @@ class DownloadRepositoryImpl {
                 eta: decoded['eta']?.toString() ?? currentTask.eta,
                 status: DownloadStatus.downloading,
               );
+              if (!singleVideoOnly &&
+                  playlistTracker.updateActiveItem(
+                    (item) => item.copyWith(
+                      progress: progress,
+                      speed: decoded['speed']?.toString() ?? item.speed,
+                      eta: decoded['eta']?.toString() ?? item.eta,
+                      status: DownloadStatus.downloading,
+                    ),
+                  )) {
+                currentTask = currentTask.copyWith(
+                  items: playlistTracker.items,
+                );
+              }
               yield currentTask;
               continue;
             }
 
             if (status == 'finished' || status == 'completed') {
+              if (!singleVideoOnly &&
+                  playlistTracker.updateActiveItem(
+                    (item) => item.copyWith(
+                      status: DownloadStatus.done,
+                      progress: 1.0,
+                      speed: 'Done',
+                      eta: '',
+                    ),
+                  )) {
+                currentTask = currentTask.copyWith(
+                  items: playlistTracker.items,
+                  status: DownloadStatus.downloading,
+                );
+                yield currentTask;
+                continue;
+              }
+
               currentTask = currentTask.copyWith(
                 status: DownloadStatus.done,
                 progress: 1.0,
@@ -152,6 +205,15 @@ class DownloadRepositoryImpl {
           filename: _decorateFilename(base, qualityLabel),
           logPath: logPath,
         );
+        if (!singleVideoOnly &&
+            playlistTracker.updateActiveItem(
+              (item) => item.copyWith(
+                filename: _decorateFilename(base, qualityLabel),
+                status: DownloadStatus.downloading,
+              ),
+            )) {
+          currentTask = currentTask.copyWith(items: playlistTracker.items);
+        }
         yield currentTask;
         continue;
       }
@@ -170,6 +232,17 @@ class DownloadRepositoryImpl {
           status: DownloadStatus.downloading,
           logPath: logPath,
         );
+        if (!singleVideoOnly &&
+            playlistTracker.updateActiveItem(
+              (item) => item.copyWith(
+                progress: (double.tryParse(percentStr) ?? 0.0) / 100.0,
+                speed: speed,
+                eta: eta,
+                status: DownloadStatus.downloading,
+              ),
+            )) {
+          currentTask = currentTask.copyWith(items: playlistTracker.items);
+        }
         yield currentTask;
         continue;
       }
@@ -198,18 +271,33 @@ class DownloadRepositoryImpl {
             logPath: logPath,
           );
         }
+        if (!singleVideoOnly &&
+            playlistTracker.updateActiveItem(
+              (item) => item.copyWith(
+                status: DownloadStatus.merging,
+                progress: 1.0,
+                speed: 'Merging...',
+                eta: '--',
+              ),
+            )) {
+          currentTask = currentTask.copyWith(items: playlistTracker.items);
+        }
         yield currentTask;
         continue;
       }
 
       // 4. Handle Completion or Errors
       if (line == '[DONE]') {
+        if (!singleVideoOnly && playlistTracker.hasItems) {
+          playlistTracker.markAllDone();
+        }
         currentTask = currentTask.copyWith(
           status: DownloadStatus.done,
           progress: 1.0,
           speed: 'Done',
           eta: '',
           logPath: logPath,
+          items: playlistTracker.items,
         );
         yield currentTask;
       } else if (line.startsWith('[ERROR]') ||

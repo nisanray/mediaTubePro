@@ -2,8 +2,12 @@
 
 ## Immediate
 - [x] Add support for single YouTube video downloads
-- [ ] Verify the queue handles one video without playlist assumptions
+- [x] Verify the queue handles one video without playlist assumptions
 - [ ] Commit the todo/spec update
+- [ ] It must show all playlist videos along with their details on double tap (if downloading a playlist)
+- [ ] Must make sure quality names are saved in the names 
+- [ ] It must add the operations in download screen just like 1dm android app
+- [ ]checking existing video if presents (options like android 1dm app)
 
 ## Single-video support notes
 - Reuse the existing yt-dlp process flow in `lib/data/datasources/process/ytdlp_datasource.dart`.
