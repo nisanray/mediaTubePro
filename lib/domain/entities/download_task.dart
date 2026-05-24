@@ -15,6 +15,7 @@ class DownloadTask {
   final String? channel;
   final String? thumbnail;
   final bool singleVideoOnly;
+  final Map<String, dynamic>? metadata;
 
   DownloadTask({
     required this.id,
@@ -31,6 +32,7 @@ class DownloadTask {
     this.channel,
     this.thumbnail,
     this.singleVideoOnly = true,
+    this.metadata,
   });
 
   DownloadTask copyWith({
@@ -46,6 +48,7 @@ class DownloadTask {
     String? channel,
     String? thumbnail,
     bool? singleVideoOnly,
+    Map<String, dynamic>? metadata,
   }) {
     return DownloadTask(
       id: id,
@@ -62,6 +65,7 @@ class DownloadTask {
       channel: channel ?? this.channel,
       thumbnail: thumbnail ?? this.thumbnail,
       singleVideoOnly: singleVideoOnly ?? this.singleVideoOnly,
+      metadata: metadata ?? this.metadata,
     );
   }
 
@@ -81,6 +85,7 @@ class DownloadTask {
       'channel': channel,
       'thumbnail': thumbnail,
       'singleVideoOnly': singleVideoOnly,
+      'metadata': metadata,
     };
   }
 
@@ -102,6 +107,9 @@ class DownloadTask {
       channel: json['channel'] as String?,
       thumbnail: json['thumbnail'] as String?,
       singleVideoOnly: json['singleVideoOnly'] as bool? ?? true,
+      metadata: (json['metadata'] as Map?)?.map(
+        (key, value) => MapEntry(key.toString(), value),
+      ),
     );
   }
 }

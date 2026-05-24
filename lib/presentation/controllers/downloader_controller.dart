@@ -17,6 +17,7 @@ class DownloaderController extends GetxController {
   final urlController = TextEditingController();
   final RxString currentUrl = ''.obs;
   final RxBool singleVideoOnly = true.obs;
+  final RxString detectedUrlKind = ''.obs;
 
   // Replace the mock map with our strongly-typed Domain Entity
   final RxList<DownloadTask> downloadQueue = <DownloadTask>[].obs;
@@ -25,6 +26,7 @@ class DownloaderController extends GetxController {
   final Map<String, StreamSubscription<DownloadTask>> _activeDownloads = {};
   // Map of repositories to allow per-task cancellation
   final Map<String, DownloadRepositoryImpl> _taskRepositories = {};
+  final Set<String> _cancelRequestedTaskIds = <String>{};
 
   @override
   void onInit() {
@@ -58,22 +60,37 @@ class DownloaderController extends GetxController {
     }
 
     urlController.addListener(() {
-      currentUrl.value = urlController.text;
+      final text = urlController.text.trim();
+      currentUrl.value = text;
+      _autoDetectUrlMode(text);
     });
   }
 
   void addToQueue() {
-    if (currentUrl.value.isEmpty) return;
+    final normalizedUrl = currentUrl.value.trim();
+    if (normalizedUrl.isEmpty) return;
+
+    final detectedKind = _detectUrlKind(normalizedUrl);
+    final isSingle = detectedKind == null
+        ? singleVideoOnly.value
+        : detectedKind != 'playlist';
+    final detectionMeta = <String, dynamic>{
+      'kind': detectedKind ?? (isSingle ? 'single' : 'playlist'),
+      'source': detectedKind == null ? 'manual' : 'auto',
+      'detectedAt': DateTime.now().toIso8601String(),
+    };
 
     final newTask = DownloadTask(
       id: const Uuid().v4(),
-      url: currentUrl.value,
+      url: normalizedUrl,
       status: DownloadStatus.pending,
-      singleVideoOnly: singleVideoOnly.value,
+      singleVideoOnly: isSingle,
+      metadata: {'linkDetection': detectionMeta},
     );
 
     downloadQueue.insert(0, newTask);
     urlController.clear();
+    detectedUrlKind.value = '';
 
     // Try to schedule downloads according to concurrency limits
     _scheduleNext();
@@ -115,6 +132,15 @@ class DownloaderController extends GetxController {
               (t) => t.id == updatedTask.id,
             );
             if (index != -1) {
+              if (_cancelRequestedTaskIds.contains(updatedTask.id)) {
+                downloadQueue[index] = downloadQueue[index].copyWith(
+                  status: DownloadStatus.cancelled,
+                  speed: 'Cancelled',
+                  eta: '--',
+                );
+                return;
+              }
+
               downloadQueue[index] = updatedTask;
 
               if (updatedTask.status == DownloadStatus.done) {
@@ -147,6 +173,14 @@ class DownloaderController extends GetxController {
           onError: (err) {
             final index = downloadQueue.indexWhere((t) => t.id == task.id);
             if (index != -1) {
+              if (_cancelRequestedTaskIds.contains(task.id)) {
+                downloadQueue[index] = downloadQueue[index].copyWith(
+                  status: DownloadStatus.cancelled,
+                  speed: 'Cancelled',
+                  eta: '--',
+                );
+                return;
+              }
               downloadQueue[index] = downloadQueue[index].copyWith(
                 status: DownloadStatus.error,
                 errorDetails: err.toString(),
@@ -157,6 +191,7 @@ class DownloaderController extends GetxController {
             // Cleanup and schedule next pending tasks
             _activeDownloads.remove(task.id)?.cancel();
             _taskRepositories.remove(task.id);
+            _cancelRequestedTaskIds.remove(task.id);
             _scheduleNext();
           },
         );
@@ -191,6 +226,20 @@ class DownloaderController extends GetxController {
   }
 
   void cancelAll() {
+    for (int i = 0; i < downloadQueue.length; i++) {
+      final task = downloadQueue[i];
+      if (task.status == DownloadStatus.downloading ||
+          task.status == DownloadStatus.pending ||
+          task.status == DownloadStatus.merging) {
+        _cancelRequestedTaskIds.add(task.id);
+        downloadQueue[i] = task.copyWith(
+          status: DownloadStatus.cancelled,
+          speed: 'Cancelled',
+          eta: '--',
+        );
+      }
+    }
+
     // Cancel all active subscriptions and repositories
     for (final sub in _activeDownloads.values) {
       try {
@@ -208,6 +257,8 @@ class DownloaderController extends GetxController {
   }
 
   void cancelTask(String taskId) {
+    _cancelRequestedTaskIds.add(taskId);
+
     final sub = _activeDownloads[taskId];
     if (sub != null) {
       try {
@@ -225,6 +276,8 @@ class DownloaderController extends GetxController {
     if (idx != -1) {
       downloadQueue[idx] = downloadQueue[idx].copyWith(
         status: DownloadStatus.cancelled,
+        speed: 'Cancelled',
+        eta: '--',
       );
     }
     _scheduleNext();
@@ -240,9 +293,13 @@ class DownloaderController extends GetxController {
       return;
     }
 
+    _cancelRequestedTaskIds.remove(taskId);
+
     downloadQueue[idx] = task.copyWith(
       status: DownloadStatus.pending,
       errorDetails: '',
+      speed: '--',
+      eta: '--',
     );
     _scheduleNext();
   }
@@ -254,10 +311,13 @@ class DownloaderController extends GetxController {
     final task = downloadQueue[idx];
     // Reset error state and increment retry count
     final newCount = task.retryCount + 1;
+    _cancelRequestedTaskIds.remove(taskId);
     downloadQueue[idx] = task.copyWith(
       status: DownloadStatus.pending,
       errorDetails: '',
       retryCount: newCount,
+      speed: '--',
+      eta: '--',
     );
 
     // Exponential backoff before scheduling: min 60s
@@ -270,7 +330,118 @@ class DownloaderController extends GetxController {
 
   void removeTask(String taskId) {
     cancelTask(taskId);
+    _cancelRequestedTaskIds.remove(taskId);
     downloadQueue.removeWhere((t) => t.id == taskId);
+  }
+
+  void clearCancelledTasks() {
+    final cancelledIds = downloadQueue
+        .where((t) => t.status == DownloadStatus.cancelled)
+        .map((t) => t.id)
+        .toList();
+    for (final id in cancelledIds) {
+      _cancelRequestedTaskIds.remove(id);
+    }
+    downloadQueue.removeWhere((t) => t.status == DownloadStatus.cancelled);
+  }
+
+  void resumeAll() {
+    for (var i = 0; i < downloadQueue.length; i++) {
+      final task = downloadQueue[i];
+      if (task.status == DownloadStatus.cancelled ||
+          task.status == DownloadStatus.error) {
+        _cancelRequestedTaskIds.remove(task.id);
+        downloadQueue[i] = task.copyWith(
+          status: DownloadStatus.pending,
+          errorDetails: '',
+          speed: '--',
+          eta: '--',
+        );
+      }
+    }
+    _scheduleNext();
+  }
+
+  void moveTaskToTop(String taskId) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx <= 0) return;
+    final task = downloadQueue.removeAt(idx);
+    downloadQueue.insert(0, task);
+  }
+
+  void moveTaskToBottom(String taskId) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx == -1 || idx == downloadQueue.length - 1) return;
+    final task = downloadQueue.removeAt(idx);
+    downloadQueue.add(task);
+  }
+
+  void restartTask(String taskId) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+
+    cancelTask(taskId);
+    final task = downloadQueue[idx];
+    _cancelRequestedTaskIds.remove(taskId);
+    downloadQueue[idx] = task.copyWith(
+      status: DownloadStatus.pending,
+      progress: 0.0,
+      speed: '--',
+      eta: '--',
+      errorDetails: '',
+      filename: 'Resolving...',
+      items: task.singleVideoOnly ? task.items : const <DownloadTask>[],
+    );
+    _scheduleNext();
+  }
+
+  DownloadTask? findTaskById(String taskId) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return null;
+    return downloadQueue[idx];
+  }
+
+  void _autoDetectUrlMode(String url) {
+    final kind = _detectUrlKind(url);
+    if (kind == null) {
+      detectedUrlKind.value = '';
+      return;
+    }
+
+    detectedUrlKind.value = kind;
+    final shouldBeSingle = kind != 'playlist';
+    if (singleVideoOnly.value != shouldBeSingle) {
+      singleVideoOnly.value = shouldBeSingle;
+    }
+  }
+
+  String? _detectUrlKind(String url) {
+    if (url.isEmpty) return null;
+    final lower = url.toLowerCase();
+
+    if (lower.contains('youtube.com/playlist?') ||
+        lower.contains('music.youtube.com/playlist?') ||
+        lower.contains('youtube.com/shorts/') ||
+        lower.contains('youtu.be/')) {
+      if (lower.contains('playlist?') || lower.contains('list=')) {
+        return 'playlist';
+      }
+      return 'single';
+    }
+
+    final parsed = Uri.tryParse(url);
+    if (parsed == null) return null;
+
+    final hasList = parsed.queryParameters.containsKey('list');
+    final hasVideo =
+        parsed.queryParameters.containsKey('v') ||
+        lower.contains('/watch') ||
+        lower.contains('/shorts/');
+
+    if (hasList && !hasVideo) return 'playlist';
+    if (hasList && hasVideo) return 'playlist';
+    if (hasVideo) return 'single';
+    return null;
   }
 
   void _persistQueue() {

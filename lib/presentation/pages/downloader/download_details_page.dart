@@ -106,10 +106,6 @@ class DownloadDetailsPage extends StatelessWidget {
     if (initial == null) return null;
     if (controller == null) return initial;
 
-    final idx = controller.downloadQueue.indexWhere((t) => t.id == initial.id);
-    if (idx == -1) {
-      return initial;
-    }
-    return controller.downloadQueue[idx];
+    return controller.findTaskById(initial.id) ?? initial;
   }
 }

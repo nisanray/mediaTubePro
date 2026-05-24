@@ -9,6 +9,13 @@
 - [ ] It must add the operations in download screen just like 1dm android app
 - [ ]checking existing video if presents (options like android 1dm app)
 
+## Next TODOs
+- [ ] Add fallback when URL detection is unknown (ask Single or Playlist before queueing)
+- [ ] Add optional manual override as a per-add action (not always visible in UI)
+- [ ] Add tests for detection edge cases (watch+list, short links, unknown hosts)
+- [ ] Add cancellation race-condition tests for queue state updates
+- [ ] Fix log loading performance: prevent UI not-responding/freezing when opening logs
+
 ## Single-video support notes
 - Reuse the existing yt-dlp process flow in `lib/data/datasources/process/ytdlp_datasource.dart`.
 - Keep `DownloadTask` metadata updates working for title, channel, thumbnail, progress, and filename.

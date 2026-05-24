@@ -14,6 +14,9 @@ void main() {
       errorDetails: '',
       logPath: '/tmp/log.jsonl',
       retryCount: 2,
+      metadata: {
+        'linkDetection': {'kind': 'playlist', 'source': 'auto'},
+      },
     );
 
     final json = t.toJson();
@@ -28,5 +31,7 @@ void main() {
     expect(t2.eta, t.eta);
     expect(t2.logPath, t.logPath);
     expect(t2.retryCount, t.retryCount);
+    expect(t2.metadata?['linkDetection']?['kind'], 'playlist');
+    expect(t2.metadata?['linkDetection']?['source'], 'auto');
   });
 }

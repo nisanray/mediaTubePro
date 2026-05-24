@@ -10,7 +10,6 @@ import '../../controllers/logs_controller.dart';
 import 'dart:io';
 import '../../widgets/main_right_sidebar.dart';
 import '../../widgets/shared/mac_button.dart';
-import '../../widgets/shared/mac_switch.dart';
 import '../../widgets/shared/mac_text_field.dart';
 
 class DownloaderPage extends StatelessWidget {
@@ -87,6 +86,19 @@ class DownloaderPage extends StatelessWidget {
                           alignment: WrapAlignment.end,
                           children: [
                             MacButton(
+                              text: 'Resume All',
+                              icon: Icons.play_arrow,
+                              onPressed: () {
+                                final ctrl = Get.find<DownloaderController>();
+                                ctrl.resumeAll();
+                                Get.snackbar(
+                                  'Downloads',
+                                  'Resumed cancelled and failed downloads',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              },
+                            ),
+                            MacButton(
                               text: 'Pause All',
                               icon: Icons.pause,
                               onPressed: () {
@@ -110,6 +122,19 @@ class DownloaderPage extends StatelessWidget {
                                 Get.snackbar(
                                   'Queue',
                                   'Cleared finished downloads',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              },
+                            ),
+                            MacButton(
+                              text: 'Clear Cancelled',
+                              icon: Icons.remove_circle_outline,
+                              onPressed: () {
+                                final ctrl = Get.find<DownloaderController>();
+                                ctrl.clearCancelledTasks();
+                                Get.snackbar(
+                                  'Queue',
+                                  'Cleared cancelled downloads',
                                   snackPosition: SnackPosition.BOTTOM,
                                 );
                               },
@@ -152,72 +177,44 @@ class DownloaderPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: MacTextField(
-                              controller: controller.urlController,
-                              hintText: 'Paste URL here...',
-                              prefixIcon: Icons.link,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          MacButton(
-                            text: 'Add to Queue',
-                            isPrimary: true,
-                            onPressed: controller.addToQueue,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Download mode
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.outlineVariant),
-                      ),
-                      child: Obx(
-                        () => Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Single video mode',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleSmall,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    controller.singleVideoOnly.value
-                                        ? 'Downloads one video and ignores playlist entries.'
-                                        : 'Allows yt-dlp to follow playlist URLs.',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: MacTextField(
+                                  controller: controller.urlController,
+                                  hintText: 'Paste URL here...',
+                                  prefixIcon: Icons.link,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            MacSwitch(
-                              value: controller.singleVideoOnly.value,
-                              onChanged: (value) {
-                                controller.singleVideoOnly.value = value;
-                              },
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 12),
+                              MacButton(
+                                text: 'Add to Queue',
+                                isPrimary: true,
+                                onPressed: controller.addToQueue,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Obx(() {
+                            final kind = controller.detectedUrlKind.value;
+                            if (kind.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            final label = kind == 'playlist'
+                                ? 'Detected: Playlist URL (playlist mode enabled)'
+                                : 'Detected: Single-video URL (single mode enabled)';
+                            return Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -444,6 +441,14 @@ class DownloaderPage extends StatelessWidget {
                     fontSize: 11,
                   ),
                 ),
+                if (_detectedKindLabel(item) != null)
+                  Text(
+                    _detectedKindLabel(item)!,
+                    style: const TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -528,12 +533,27 @@ class DownloaderPage extends StatelessWidget {
                   final controller = Get.find<DownloaderController>();
                   if (value == 'open') {
                     await controller.openFolderForTask(item.id);
+                  } else if (value == 'details') {
+                    Get.toNamed('/download-details', arguments: item);
+                  } else if (value == 'copy_url') {
+                    await Clipboard.setData(ClipboardData(text: item.url));
+                    Get.snackbar(
+                      'Copied',
+                      'URL copied to clipboard',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
                   } else if (value == 'cancel') {
                     controller.cancelTask(item.id);
                   } else if (value == 'resume') {
                     controller.resumeTask(item.id);
                   } else if (value == 'retry') {
                     controller.retryTask(item.id);
+                  } else if (value == 'restart') {
+                    controller.restartTask(item.id);
+                  } else if (value == 'move_top') {
+                    controller.moveTaskToTop(item.id);
+                  } else if (value == 'move_bottom') {
+                    controller.moveTaskToBottom(item.id);
                   } else if (value == 'remove') {
                     controller.removeTask(item.id);
                   } else if (value == 'logs') {
@@ -689,6 +709,12 @@ class DownloaderPage extends StatelessWidget {
                   }
                 },
                 itemBuilder: (ctx) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem(value: 'details', child: Text('Details')),
+                  const PopupMenuItem(
+                    value: 'copy_url',
+                    child: Text('Copy URL'),
+                  ),
+                  const PopupMenuDivider(),
                   if (isDone)
                     const PopupMenuItem(
                       value: 'open',
@@ -700,7 +726,22 @@ class DownloaderPage extends StatelessWidget {
                     const PopupMenuItem(value: 'resume', child: Text('Resume')),
                   if (hasError)
                     const PopupMenuItem(value: 'retry', child: Text('Retry')),
-                  if (hasError)
+                  if (!isDownloading)
+                    const PopupMenuItem(
+                      value: 'restart',
+                      child: Text('Restart'),
+                    ),
+                  if (!isDownloading)
+                    const PopupMenuItem(
+                      value: 'move_top',
+                      child: Text('Move to Top'),
+                    ),
+                  if (!isDownloading)
+                    const PopupMenuItem(
+                      value: 'move_bottom',
+                      child: Text('Move to Bottom'),
+                    ),
+                  if (isDone || isCancelled || hasError)
                     const PopupMenuItem(value: 'remove', child: Text('Remove')),
                   const PopupMenuItem(value: 'logs', child: Text('Show Logs')),
                 ],
@@ -710,5 +751,15 @@ class DownloaderPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String? _detectedKindLabel(DownloadTask item) {
+    final metadata = item.metadata;
+    if (metadata == null) return null;
+    final linkDetection = metadata['linkDetection'];
+    if (linkDetection is! Map) return null;
+    final kind = linkDetection['kind']?.toString();
+    if (kind == null || kind.isEmpty) return null;
+    return kind == 'playlist' ? 'Type: Playlist' : 'Type: Single video';
   }
 }
