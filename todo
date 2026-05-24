@@ -1,0 +1,24 @@
+# TODO
+
+## Immediate
+- [ ] Add support for single YouTube video downloads
+- [ ] Verify the queue handles one video without playlist assumptions
+- [ ] Commit the todo/spec update
+
+## Single-video support notes
+- Reuse the existing yt-dlp process flow in `lib/data/datasources/process/ytdlp_datasource.dart`.
+- Keep `DownloadTask` metadata updates working for title, channel, thumbnail, progress, and filename.
+- Make sure the downloader UI treats a single video as one task, not a playlist container.
+- Keep history entries populated for single videos with channel and thumbnail.
+
+## YouTube smart downloader should have
+- Smart format selection for video/audio based on quality and device needs.
+- Single-video and playlist support with clear UI paths.
+- Resume, retry, and cancellation controls per task.
+- Metadata capture for title, channel, thumbnail, duration, and filesize.
+- Subtitle, chapter, and metadata embedding options.
+- Download presets for fast, balanced, and high-quality modes.
+- Per-task output folder selection and filename templating.
+- Post-processing hooks for merge, audio extract, and cleanup.
+- Better failure handling with actionable error messages.
+- History, search, and filters for completed downloads.

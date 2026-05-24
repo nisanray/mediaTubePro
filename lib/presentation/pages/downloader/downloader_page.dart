@@ -1,0 +1,663 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../core/theme/app_colors.dart';
+import 'package:flutter/services.dart';
+import '../../../core/utils/binary_locator.dart';
+import '../../../domain/entities/download_task.dart';
+import '../../controllers/downloader_controller.dart';
+// settings_controller import removed; use Settings in sidebar
+import '../../controllers/logs_controller.dart';
+import 'dart:io';
+import '../../widgets/main_right_sidebar.dart';
+import '../../widgets/shared/mac_button.dart';
+import '../../widgets/shared/mac_text_field.dart';
+
+class DownloaderPage extends StatelessWidget {
+  const DownloaderPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Instantiate controller locally for this view
+    final controller = Get.put(DownloaderController());
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final showSidebar = constraints.maxWidth >= 980;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Show binary initialization warnings if present
+                    if (BinaryLocator.initError != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppColors.error.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Binary setup needs attention. Open Settings and set custom yt-dlp / FFmpeg paths if bundled binaries are not available.',
+                                style: const TextStyle(
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                            ),
+                            MacButton(
+                              text: 'Open Settings',
+                              onPressed: () => Get.toNamed('/settings'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Header
+                    LayoutBuilder(
+                      builder: (context, headerConstraints) {
+                        final isCompact = headerConstraints.maxWidth < 600;
+
+                        final title = Text(
+                          'Download Queue',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        );
+
+                        // (save location row removed - use Settings sidebar to change default)
+
+                        final actions = Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          children: [
+                            MacButton(
+                              text: 'Pause All',
+                              icon: Icons.pause,
+                              onPressed: () {
+                                final ctrl = Get.find<DownloaderController>();
+                                ctrl.cancelAll();
+                                Get.snackbar(
+                                  'Downloads',
+                                  'All active downloads cancelled',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              },
+                            ),
+                            MacButton(
+                              text: 'Clear Finished',
+                              icon: Icons.clear_all,
+                              onPressed: () {
+                                final ctrl = Get.find<DownloaderController>();
+                                ctrl.downloadQueue.removeWhere(
+                                  (t) => t.status == DownloadStatus.done,
+                                );
+                                Get.snackbar(
+                                  'Queue',
+                                  'Cleared finished downloads',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              },
+                            ),
+                          ],
+                        );
+
+                        if (isCompact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              title,
+                              const SizedBox(height: 12),
+                              actions,
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [title, actions],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // URL Input Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.outlineVariant),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: MacTextField(
+                              controller: controller.urlController,
+                              hintText: 'Paste URL here...',
+                              prefixIcon: Icons.link,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          MacButton(
+                            text: 'Add to Queue',
+                            isPrimary: true,
+                            onPressed: controller.addToQueue,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Queue Table
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.outlineVariant),
+                        ),
+                        child: Column(
+                          children: [
+                            // Table Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: AppColors.surfaceContainerLow,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(8),
+                                ),
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.outlineVariant,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: const [
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      'STATUS',
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'FILENAME',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 160,
+                                    child: Text(
+                                      'PROGRESS',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 140,
+                                    child: Text(
+                                      'SPEED',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 60,
+                                    child: Text(
+                                      'ACTION',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Table Body
+                            Expanded(
+                              child: Obx(
+                                () => ListView.builder(
+                                  itemCount: controller.downloadQueue.length,
+                                  itemBuilder: (context, index) {
+                                    final item =
+                                        controller.downloadQueue[index];
+                                    return GestureDetector(
+                                      onDoubleTap: () => Get.toNamed(
+                                        '/download-details',
+                                        arguments: item,
+                                      ),
+                                      child: _buildQueueRow(context, item),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (showSidebar) ...[
+                const SizedBox(width: 16),
+                const MainRightSidebar(),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildQueueRow(BuildContext context, DownloadTask item) {
+    final isDone = item.status == DownloadStatus.done;
+    final isDownloading = item.status == DownloadStatus.downloading;
+    final isMerging = item.status == DownloadStatus.merging;
+    final hasError = item.status == DownloadStatus.error;
+    final isCancelled = item.status == DownloadStatus.cancelled;
+
+    IconData statusIcon = Icons.schedule;
+    Color statusColor = AppColors.onSurfaceVariant;
+
+    if (isDownloading) {
+      statusIcon = Icons.downloading;
+      statusColor = AppColors.primary;
+    } else if (isMerging) {
+      statusIcon = Icons.sync;
+      statusColor = AppColors.tertiary;
+    } else if (isDone) {
+      statusIcon = Icons.done_all;
+      statusColor = AppColors.success;
+    } else if (hasError) {
+      statusIcon = Icons.error_outline;
+      statusColor = AppColors.error;
+    } else if (isCancelled) {
+      statusIcon = Icons.pause_circle_outline;
+      statusColor = AppColors.onSurfaceVariant;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDownloading
+            ? AppColors.primaryContainer.withOpacity(0.05)
+            : Colors.transparent,
+        border: const Border(
+          bottom: BorderSide(color: AppColors.outlineVariant, width: 0.5),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Status Icon
+          SizedBox(
+            width: 80,
+            child: Center(
+              child: isDone
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Done',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.folder_open, color: statusColor, size: 16),
+                      ],
+                    )
+                  : Icon(statusIcon, color: statusColor, size: 20),
+            ),
+          ),
+
+          // Filename & Meta
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.filename,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (item.retryCount > 0)
+                  Text(
+                    'Retries: ${item.retryCount}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                Text(
+                  item.url,
+                  style: const TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Progress Bar
+          SizedBox(
+            width: 160,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  isDone
+                      ? '100%'
+                      : isDownloading
+                      ? '${(item.progress * 100).toInt()}%'
+                      : isCancelled
+                      ? 'Cancelled'
+                      : 'Pending',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isDownloading
+                        ? AppColors.onSurface
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: item.progress,
+                  backgroundColor: AppColors.surfaceContainerHighest,
+                  color: isDone ? AppColors.success : AppColors.primary,
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ],
+            ),
+          ),
+
+          // Speed & ETA
+          SizedBox(
+            width: 140,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  item.speed,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                Text(
+                  item.eta,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Action Button / Menu
+          SizedBox(
+            width: 60,
+            child: Align(
+              alignment: Alignment.center,
+              child: PopupMenuButton<String>(
+                icon: Icon(
+                  isDone
+                      ? Icons.folder_open
+                      : (hasError
+                            ? Icons.refresh
+                            : (isCancelled
+                                  ? Icons.play_arrow
+                                  : Icons.more_vert)),
+                  size: 16,
+                ),
+                onSelected: (value) async {
+                  final controller = Get.find<DownloaderController>();
+                  if (value == 'open') {
+                    await controller.openFolderForTask(item.id);
+                  } else if (value == 'cancel') {
+                    controller.cancelTask(item.id);
+                  } else if (value == 'resume') {
+                    controller.resumeTask(item.id);
+                  } else if (value == 'retry') {
+                    controller.retryTask(item.id);
+                  } else if (value == 'remove') {
+                    controller.removeTask(item.id);
+                  } else if (value == 'logs') {
+                    // Read logs from the task's log file asynchronously and show dialog
+                    if (item.logPath != null) {
+                      try {
+                        final f = File(item.logPath!);
+                        if (await f.exists()) {
+                          final lines = await f.readAsLines();
+                          final parsedEntries = lines
+                              .map(
+                                (line) => LogsController.parseLogLine(
+                                  line,
+                                  fallbackSource: 'task:${item.id}',
+                                ),
+                              )
+                              .toList();
+
+                          if (parsedEntries.isNotEmpty) {
+                            final logsController = Get.put(LogsController());
+
+                            await showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Logs'),
+                                content: SizedBox(
+                                  width: 600,
+                                  height: 300,
+                                  child: SelectionArea(
+                                    child: SingleChildScrollView(
+                                      child: SelectableText.rich(
+                                        TextSpan(
+                                          children: parsedEntries
+                                              .map(
+                                                (entry) => TextSpan(
+                                                  children: [
+                                                    TextSpan(
+                                                      text:
+                                                          '${entry.timestamp} ',
+                                                      style: const TextStyle(
+                                                        fontFamily:
+                                                            'JetBrains Mono',
+                                                      ),
+                                                    ),
+                                                    TextSpan(
+                                                      text: '[${entry.level}] ',
+                                                      style: const TextStyle(
+                                                        fontFamily:
+                                                            'JetBrains Mono',
+                                                      ),
+                                                    ),
+                                                    TextSpan(
+                                                      text:
+                                                          '${entry.message}\n',
+                                                      style: const TextStyle(
+                                                        fontFamily:
+                                                            'JetBrains Mono',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                        style: const TextStyle(
+                                          fontFamily: 'JetBrains Mono',
+                                          fontSize: 13,
+                                        ),
+                                        onSelectionChanged: (selection, cause) {
+                                          if (selection.baseOffset < 0 ||
+                                              selection.extentOffset < 0) {
+                                            logsController.updateSelectedText(
+                                              '',
+                                            );
+                                            return;
+                                          }
+
+                                          final start = selection.start;
+                                          final end = selection.end;
+                                          if (start == end) {
+                                            logsController.updateSelectedText(
+                                              '',
+                                            );
+                                            return;
+                                          }
+
+                                          // Copy-friendly: store full line when any
+                                          // portion is selected so badges are included
+                                          // by the one-click Copy Selected action.
+                                          final plain = parsedEntries
+                                              .map(
+                                                LogsController.formatLogEntry,
+                                              )
+                                              .join('\n');
+                                          // Try to infer which line was selected by
+                                          // mapping offsets into the joined plain text.
+                                          // For simplicity, copy the entire plain
+                                          // content when selection exists.
+                                          logsController.updateSelectedText(
+                                            plain,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Close'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      final txt =
+                                          logsController.selectedText.value;
+                                      if (txt.isNotEmpty) {
+                                        Clipboard.setData(
+                                          ClipboardData(text: txt),
+                                        );
+                                        Get.snackbar(
+                                          'Copied',
+                                          'Selected text copied to clipboard',
+                                          snackPosition: SnackPosition.BOTTOM,
+                                        );
+                                      }
+                                    },
+                                    child: const Text('Copy Selected'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      final all = parsedEntries
+                                          .map(LogsController.formatLogEntry)
+                                          .join('\n');
+                                      Clipboard.setData(
+                                        ClipboardData(text: all),
+                                      );
+                                      Get.snackbar(
+                                        'Copied',
+                                        'All logs copied to clipboard',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                      );
+                                    },
+                                    child: const Text('Copy All'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            // end dialog
+                          }
+                        }
+                      } catch (_) {}
+                    }
+                  }
+                },
+                itemBuilder: (ctx) => <PopupMenuEntry<String>>[
+                  if (isDone)
+                    const PopupMenuItem(
+                      value: 'open',
+                      child: Text('Open Folder'),
+                    ),
+                  if (isDownloading || item.status == DownloadStatus.pending)
+                    const PopupMenuItem(value: 'cancel', child: Text('Cancel')),
+                  if (isCancelled)
+                    const PopupMenuItem(value: 'resume', child: Text('Resume')),
+                  if (hasError)
+                    const PopupMenuItem(value: 'retry', child: Text('Retry')),
+                  if (hasError)
+                    const PopupMenuItem(value: 'remove', child: Text('Remove')),
+                  const PopupMenuItem(value: 'logs', child: Text('Show Logs')),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
