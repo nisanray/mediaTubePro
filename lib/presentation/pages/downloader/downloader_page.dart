@@ -539,44 +539,54 @@ class DownloaderPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 // Quality, Size, and Format badges
-                Builder(builder: (context) {
-                  final meta = item.metadata ?? {};
-                  String qualityRaw = '';
-                  if (meta['quality'] is String && (meta['quality'] as String).isNotEmpty) {
-                    qualityRaw = meta['quality'] as String;
-                  } else if (meta['selectedQuality'] is String) {
-                    qualityRaw = meta['selectedQuality'] as String;
-                  }
-                  String qualityShort = '';
-                  final qMatch = RegExp(r"\d+p").firstMatch(qualityRaw);
-                  if (qMatch != null) {
-                    qualityShort = qMatch.group(0)!;
-                  } else if (qualityRaw.toLowerCase().contains('audio')) {
-                    qualityShort = 'Audio';
-                  } else if (qualityRaw.isNotEmpty) {
-                    qualityShort = qualityRaw.split(' ').first;
-                  }
+                Builder(
+                  builder: (context) {
+                    final meta = item.metadata ?? {};
+                    String qualityRaw = '';
+                    if (meta['quality'] is String &&
+                        (meta['quality'] as String).isNotEmpty) {
+                      qualityRaw = meta['quality'] as String;
+                    } else if (meta['selectedQuality'] is String) {
+                      qualityRaw = meta['selectedQuality'] as String;
+                    }
+                    String qualityShort = '';
+                    final qMatch = RegExp(r"\d+p").firstMatch(qualityRaw);
+                    if (qMatch != null) {
+                      qualityShort = qMatch.group(0)!;
+                    } else if (qualityRaw.toLowerCase().contains('audio')) {
+                      qualityShort = 'Audio';
+                    } else if (qualityRaw.isNotEmpty) {
+                      qualityShort = qualityRaw.split(' ').first;
+                    }
 
-                  final size = (meta['size'] as String?) ?? '--';
-                  final format = (meta['format'] as String?) ?? item.filename.split('.').length > 1 ? item.filename.split('.').last : '';
+                    final size = (meta['size'] as String?) ?? '--';
+                    final format = (meta['format'] as String?) ??
+                        (item.filename.split('.').length > 1
+                            ? item.filename.split('.').last
+                            : '');
 
-                  return Row(
-                    children: [
-                      if (qualityShort.isNotEmpty || size != '--')
-                        Chip(
-                          label: Text(
-                            (qualityShort.isNotEmpty ? qualityShort : '') + (size != '--' ? ' • $size' : ''),
-                            style: const TextStyle(fontSize: 12),
+                    return Row(
+                      children: [
+                        if (qualityShort.isNotEmpty || size != '--')
+                          Chip(
+                            label: Text(
+                              (qualityShort.isNotEmpty ? qualityShort : '') +
+                                  (size != '--' ? ' • $size' : ''),
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
-                        ),
-                      const SizedBox(width: 8),
-                      if (format.isNotEmpty)
-                        Chip(
-                          label: Text(format.toLowerCase(), style: const TextStyle(fontSize: 12)),
-                        ),
-                    ],
-                  );
-                }),
+                        const SizedBox(width: 8),
+                        if (format.isNotEmpty)
+                          Chip(
+                            label: Text(
+                              format.toLowerCase(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
                 if (_detectedKindLabel(item) != null)
                   Text(
                     _detectedKindLabel(item)!,
