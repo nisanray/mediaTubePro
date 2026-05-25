@@ -65,8 +65,10 @@ class DownloadDetailsPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              // Action row
-              Row(
+              // Action row (wrap to avoid overflow on narrow viewports)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
