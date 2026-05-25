@@ -266,9 +266,9 @@ class HistoryPage extends StatelessWidget {
                           ),
                         ),
                         SizedBox(
-                          width: 80,
+                          width: 120,
                           child: Text(
-                            'SIZE',
+                            'QUALITY • SIZE',
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 10,
@@ -550,31 +550,44 @@ class HistoryPage extends StatelessWidget {
                   color: !isSuccess
                       ? AppColors.surfaceContainerHighest
                       : isAudio
-                      ? AppColors.tertiaryContainer
-                      : AppColors.primaryContainer,
+                          ? AppColors.tertiaryContainer
+                          : AppColors.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  item['format'],
+                  (item['format'] ?? '').toString().toLowerCase(),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: !isSuccess
                         ? AppColors.onSurfaceVariant
                         : isAudio
-                        ? AppColors.onTertiaryContainer
-                        : AppColors.onPrimaryContainer,
+                            ? AppColors.onTertiaryContainer
+                            : AppColors.onPrimaryContainer,
                   ),
                 ),
               ),
             ),
           ),
 
-          // Size
+          // Quality • Size
           SizedBox(
-            width: 80,
+            width: 120,
             child: Text(
-              item['size'],
+              (() {
+                final qRaw = (item['quality'] as String?) ?? '';
+                String qShort = '';
+                final m = RegExp(r"\d+p").firstMatch(qRaw);
+                if (m != null) qShort = m.group(0)!;
+                else if (qRaw.toLowerCase().contains('audio')) qShort = 'Audio';
+
+                final size = (item['size'] as String?) ?? '--';
+                if (qShort.isNotEmpty && size.isNotEmpty && size != '—') {
+                  return '$qShort • $size';
+                }
+                if (size.isNotEmpty) return size;
+                return '--';
+              })(),
               textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 12,

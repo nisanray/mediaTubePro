@@ -282,14 +282,24 @@ class DownloaderController extends GetxController {
               downloadQueue[index] = updatedTask;
 
               if (updatedTask.status == DownloadStatus.done) {
+                final meta = updatedTask.metadata ?? {};
+                final format = (meta['format'] as String?) ??
+                    (updatedTask.filename.split('.').length > 1
+                        ? updatedTask.filename.split('.').last
+                        : '');
+                final size = (meta['size'] as String?) ?? 'Complete';
+                final quality = (meta['quality'] as String?) ?? qualityLabel;
+                final isAudio = format.toLowerCase() == 'mp3' || quality == 'Audio Only';
+
                 historyController?.addFinishedTask(
                   updatedTask.filename,
                   updatedTask.url,
-                  qualityLabel,
-                  false,
-                  'Complete',
+                  format,
+                  isAudio,
+                  size,
                   updatedTask.channel,
                   updatedTask.thumbnail,
+                  quality,
                 );
 
                 if (settingsController?.notifications.value ?? false) {

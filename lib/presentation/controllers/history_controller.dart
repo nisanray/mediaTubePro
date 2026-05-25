@@ -163,6 +163,7 @@ class HistoryController extends GetxController {
     String size,
     String? channel,
     String? thumbnail,
+    String? quality,
   ) {
     final now = DateTime.now();
     final formattedDate = DateFormat('MMM d, h:mm a').format(now);
@@ -173,6 +174,7 @@ class HistoryController extends GetxController {
       'url': url,
       'channel': channel,
       'format': format,
+      'quality': quality,
       'isAudio': isAudio,
       'size': size,
       'date': formattedDate,
