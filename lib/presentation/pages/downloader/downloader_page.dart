@@ -21,7 +21,7 @@ class DownloaderPage extends StatelessWidget {
     final controller = Get.put(DownloaderController());
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final showSidebar = constraints.maxWidth >= 980;

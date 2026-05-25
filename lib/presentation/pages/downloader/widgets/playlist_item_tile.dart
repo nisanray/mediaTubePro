@@ -16,7 +16,7 @@ class PlaylistItemTile extends StatelessWidget {
         : null;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         dense: true,
         title: Text(
@@ -28,11 +28,11 @@ class PlaylistItemTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text('Status: ${task.status.name}'),
             Text('Progress: ${(task.progress * 100).toInt()}%'),
             Padding(
-              padding: const EdgeInsets.only(top: 6.0, bottom: 6.0),
+              padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
               child: LinearProgressIndicator(value: task.progress),
             ),
             Text('Speed: ${task.speed}'),

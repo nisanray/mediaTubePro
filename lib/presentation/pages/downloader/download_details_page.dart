@@ -43,17 +43,17 @@ class DownloadDetailsPage extends StatelessWidget {
         final playlistItems = task.items ?? const <DownloadTask>[];
 
         return Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16.0),
           child: ListView(
             children: [
               Text(
                 task.filename,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 6,
+                runSpacing: 6,
                 children: [
                   Chip(label: Text(task.status.name)),
                   Chip(
@@ -65,11 +65,11 @@ class DownloadDetailsPage extends StatelessWidget {
                   Chip(label: Text(task.speed)),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               // Action row (wrap to avoid overflow on narrow viewports)
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 6,
+                runSpacing: 6,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
@@ -78,7 +78,6 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('Resume'),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () {
                       if (ctrl != null) ctrl.cancelTask(task.id);
@@ -89,7 +88,6 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.cancel),
                     label: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () {
                       if (ctrl != null) ctrl.retryTask(task.id);
@@ -97,7 +95,6 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry'),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () async {
                       if (ctrl != null) {
@@ -107,7 +104,6 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.folder_open),
                     label: const Text('Open Folder'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: task.url));
@@ -116,7 +112,7 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.copy),
                     label: const Text('Copy URL'),
                   ),
-                  const SizedBox(width: 8),
+                  
                   // Rename
                   OutlinedButton.icon(
                     onPressed: () async {
@@ -126,16 +122,26 @@ class DownloadDetailsPage extends StatelessWidget {
                           title: const Text('Rename output'),
                           content: TextField(
                             autofocus: true,
-                            controller: TextEditingController(text: task.filename),
+                            controller: TextEditingController(
+                              text: task.filename,
+                            ),
                             onSubmitted: (v) => Get.back(result: v),
                           ),
                           actions: [
-                            TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-                            ElevatedButton(onPressed: () => Get.back(result: null), child: const Text('OK')),
+                            TextButton(
+                              onPressed: () => Get.back(),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Get.back(result: null),
+                              child: const Text('OK'),
+                            ),
                           ],
                         ),
                       );
-                      if (name != null && name.isNotEmpty && ctrlLocal != null) {
+                      if (name != null &&
+                          name.isNotEmpty &&
+                          ctrlLocal != null) {
                         ctrlLocal.renameTask(task.id, name);
                       }
                     },
@@ -143,6 +149,7 @@ class DownloadDetailsPage extends StatelessWidget {
                     label: const Text('Rename'),
                   ),
                   // Quality picker
+                  const SizedBox(width: 6),
                   OutlinedButton.icon(
                     onPressed: () async {
                       final options = [
@@ -162,7 +169,9 @@ class DownloadDetailsPage extends StatelessWidget {
                                   .map(
                                     (o) => RadioListTile<String>(
                                       value: o,
-                                      groupValue: task.metadata?['selectedQuality'] as String?,
+                                      groupValue:
+                                          task.metadata?['selectedQuality']
+                                              as String?,
                                       title: Text(o),
                                       onChanged: (v) => Get.back(result: v),
                                     ),
@@ -192,20 +201,20 @@ class DownloadDetailsPage extends StatelessWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               if (playlistItems.isNotEmpty) ...[
                 Text(
                   'Playlist videos (${playlistItems.length})',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 ...playlistItems.map((child) => PlaylistItemTile(task: child)),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
               ],
               Text('URL', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
               SelectableText(task.url),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               ElevatedButton.icon(
                 onPressed: () async {
                   if (ctrl != null) {
