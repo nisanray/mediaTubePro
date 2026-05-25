@@ -10,6 +10,7 @@ import 'history_controller.dart';
 import 'settings_controller.dart';
 import '../../../data/datasources/process/ytdlp_datasource.dart';
 import '../../../data/repositories/download_repository_impl.dart';
+import 'package:path/path.dart' as p;
 
 // Choice for duplicate-task prompt when adding a URL already in the queue.
 enum _DuplicateTaskChoice { skip, redownload, rename }
@@ -283,13 +284,19 @@ class DownloaderController extends GetxController {
 
               if (updatedTask.status == DownloadStatus.done) {
                 final meta = updatedTask.metadata ?? {};
-                final format = (meta['format'] as String?) ??
+                final format =
+                    (meta['format'] as String?) ??
                     (updatedTask.filename.split('.').length > 1
                         ? updatedTask.filename.split('.').last
                         : '');
-                final size = (meta['size'] as String?) ?? 'Complete';
+                final size = _resolveHistorySize(
+                  meta,
+                  outputFolder,
+                  updatedTask.filename,
+                );
                 final quality = (meta['quality'] as String?) ?? qualityLabel;
-                final isAudio = format.toLowerCase() == 'mp3' || quality == 'Audio Only';
+                final isAudio =
+                    format.toLowerCase() == 'mp3' || quality == 'Audio Only';
 
                 historyController?.addFinishedTask(
                   updatedTask.filename,
@@ -848,5 +855,44 @@ class DownloaderController extends GetxController {
             ? 'bestvideo+bestaudio/best'
             : 'bestvideo+bestaudio/best';
     }
+  }
+
+  String _resolveHistorySize(
+    Map<String, dynamic> metadata,
+    String outputFolder,
+    String filename,
+  ) {
+    final existing = (metadata['size'] as String?)?.trim() ?? '';
+    if (existing.isNotEmpty && existing != '--' && existing != '—') {
+      return existing;
+    }
+
+    if (filename.trim().isNotEmpty) {
+      try {
+        final fullPath = p.join(outputFolder, filename);
+        final file = File(fullPath);
+        if (file.existsSync()) {
+          return _formatBytes(file.lengthSync());
+        }
+      } catch (_) {}
+    }
+
+    return '--';
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var value = bytes.toDouble();
+    var index = 0;
+
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index++;
+    }
+
+    final precision = value >= 100 ? 0 : (value >= 10 ? 1 : 2);
+    return '${value.toStringAsFixed(precision)} ${units[index]}';
   }
 }

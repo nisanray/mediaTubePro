@@ -113,10 +113,15 @@ class DownloadRepositoryImpl {
               // Attach format and quality metadata for UI
               final dotIdx = base.lastIndexOf('.');
               final ext = dotIdx > 0 ? base.substring(dotIdx + 1) : '';
-              final meta = Map<String, dynamic>.from(currentTask.metadata ?? {});
+              final meta = Map<String, dynamic>.from(
+                currentTask.metadata ?? {},
+              );
               meta['format'] = ext.isNotEmpty ? ext : meta['format'];
               meta['quality'] = qualityLabel;
-              currentTask = currentTask.copyWith(filename: decorated, metadata: meta);
+              currentTask = currentTask.copyWith(
+                filename: decorated,
+                metadata: meta,
+              );
               if (!singleVideoOnly &&
                   playlistTracker.updateActiveItem(
                     (item) => item.copyWith(
@@ -152,11 +157,20 @@ class DownloadRepositoryImpl {
                 progress = (p > 1.0) ? (p / 100.0) : p.toDouble();
               }
 
+              final meta = Map<String, dynamic>.from(
+                currentTask.metadata ?? {},
+              );
+              final parsedSize = _extractSizeFromJson(decoded);
+              if (parsedSize != null && parsedSize.isNotEmpty) {
+                meta['size'] = parsedSize;
+              }
+
               currentTask = currentTask.copyWith(
                 progress: progress,
                 speed: decoded['speed']?.toString() ?? currentTask.speed,
                 eta: decoded['eta']?.toString() ?? currentTask.eta,
                 status: DownloadStatus.downloading,
+                metadata: meta,
               );
               if (!singleVideoOnly &&
                   playlistTracker.updateActiveItem(
@@ -365,6 +379,37 @@ class DownloadRepositoryImpl {
       return line.replaceFirst('[ERROR] ', '');
     }
     return 'Download failed. Open the log file for more details.';
+  }
+
+  String? _extractSizeFromJson(Map decoded) {
+    final dynamic totalBytes =
+        decoded['total_bytes'] ?? decoded['total_bytes_estimate'];
+    if (totalBytes is num && totalBytes > 0) {
+      return _formatBytes(totalBytes.toDouble());
+    }
+
+    final dynamic downloadedBytes = decoded['downloaded_bytes'];
+    if (downloadedBytes is num && downloadedBytes > 0) {
+      return _formatBytes(downloadedBytes.toDouble());
+    }
+
+    return null;
+  }
+
+  String _formatBytes(double bytes) {
+    if (bytes <= 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var value = bytes;
+    var index = 0;
+
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index++;
+    }
+
+    final precision = value >= 100 ? 0 : (value >= 10 ? 1 : 2);
+    return '${value.toStringAsFixed(precision)} ${units[index]}';
   }
 
   void cancelDownload({bool forceKill = true}) {

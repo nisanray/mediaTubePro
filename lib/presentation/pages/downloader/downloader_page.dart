@@ -560,7 +560,8 @@ class DownloaderPage extends StatelessWidget {
                     }
 
                     final size = (meta['size'] as String?) ?? '--';
-                    final format = (meta['format'] as String?) ??
+                    final format =
+                        (meta['format'] as String?) ??
                         (item.filename.split('.').length > 1
                             ? item.filename.split('.').last
                             : '');

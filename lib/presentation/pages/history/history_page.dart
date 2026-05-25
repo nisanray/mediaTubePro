@@ -5,6 +5,7 @@ import '../../controllers/history_controller.dart';
 import '../../controllers/settings_controller.dart';
 import '../../controllers/downloader_controller.dart';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import '../../widgets/shared/glass_panel.dart';
 import '../../widgets/shared/mac_button.dart';
 import '../../../core/theme/spacing.dart';
@@ -97,9 +98,9 @@ class HistoryPage extends StatelessWidget {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           padding: const EdgeInsets.symmetric(
-                                horizontal: Spacing.chipHorizontal,
-                                vertical: Spacing.chipVertical,
-                              ),
+                            horizontal: Spacing.chipHorizontal,
+                            vertical: Spacing.chipVertical,
+                          ),
                           decoration: BoxDecoration(
                             color: backgroundColor,
                             borderRadius: BorderRadius.circular(999),
@@ -383,7 +384,9 @@ class HistoryPage extends StatelessWidget {
   Widget _buildHistoryRow(Map<String, dynamic> item) {
     final status = (item['status'] ?? 'success').toString();
     final isSuccess = status == 'success';
-    final isAudio = item['isAudio'] == true;
+    final displayTitle = _resolveDisplayTitle(item);
+    final displayFormat = _resolveExactFormat(item);
+    final isAudio = item['isAudio'] == true || _isAudioFormat(displayFormat);
 
     final statusLabel = isSuccess ? 'Success' : 'Failed';
     final statusIcon = isSuccess ? Icons.check_circle : Icons.error;
@@ -489,7 +492,7 @@ class HistoryPage extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        item['title'],
+                        displayTitle,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -550,20 +553,20 @@ class HistoryPage extends StatelessWidget {
                   color: !isSuccess
                       ? AppColors.surfaceContainerHighest
                       : isAudio
-                          ? AppColors.tertiaryContainer
-                          : AppColors.primaryContainer,
+                      ? AppColors.tertiaryContainer
+                      : AppColors.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  (item['format'] ?? '').toString().toLowerCase(),
+                  displayFormat,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: !isSuccess
                         ? AppColors.onSurfaceVariant
                         : isAudio
-                            ? AppColors.onTertiaryContainer
-                            : AppColors.onPrimaryContainer,
+                        ? AppColors.onTertiaryContainer
+                        : AppColors.onPrimaryContainer,
                   ),
                 ),
               ),
@@ -574,20 +577,7 @@ class HistoryPage extends StatelessWidget {
           SizedBox(
             width: 120,
             child: Text(
-              (() {
-                final qRaw = (item['quality'] as String?) ?? '';
-                String qShort = '';
-                final m = RegExp(r"\d+p").firstMatch(qRaw);
-                if (m != null) qShort = m.group(0)!;
-                else if (qRaw.toLowerCase().contains('audio')) qShort = 'Audio';
-
-                final size = (item['size'] as String?) ?? '--';
-                if (qShort.isNotEmpty && size.isNotEmpty && size != '—') {
-                  return '$qShort • $size';
-                }
-                if (size.isNotEmpty) return size;
-                return '--';
-              })(),
+              _buildQualitySizeText(item, (item['title'] ?? '').toString()),
               textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 12,
@@ -662,5 +652,156 @@ class HistoryPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _resolveDisplayTitle(Map<String, dynamic> item) {
+    final raw = (item['title'] ?? '').toString().trim();
+    if (raw.isEmpty) return 'Untitled';
+
+    // Keep the title clean for history rows (remove app tags / premium noise).
+    var title = raw;
+    title = title.replaceAll(
+      RegExp(r'\[[^\]]*(mediatube|premium)[^\]]*\]', caseSensitive: false),
+      '',
+    );
+    title = title.replaceAll('_', ' ');
+    title = title.replaceAll(
+      RegExp(r'\s*[-_]?\s*MediaTube\s*$', caseSensitive: false),
+      '',
+    );
+    title = title.replaceAll(RegExp(r'\.[A-Za-z0-9]{2,5}$'), '');
+    title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return title.isEmpty ? raw : title;
+  }
+
+  String _resolveExactFormat(Map<String, dynamic> item) {
+    final title = (item['title'] ?? '').toString();
+    final rawFormat = (item['format'] ?? '').toString().trim();
+
+    final extFromTitle = _extractExtension(title);
+    if (extFromTitle.isNotEmpty) return extFromTitle;
+
+    final extFromFormat = _extractExtension(rawFormat);
+    if (extFromFormat.isNotEmpty) return extFromFormat;
+
+    if (rawFormat.isNotEmpty &&
+        RegExp(r'^[A-Za-z0-9]{2,8}$').hasMatch(rawFormat)) {
+      return rawFormat;
+    }
+    return '--';
+  }
+
+  String _extractExtension(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+
+    final cleanName = trimmed.split('/').last.split('\\').last;
+    final dot = cleanName.lastIndexOf('.');
+    if (dot <= 0 || dot == cleanName.length - 1) return '';
+
+    final ext = cleanName.substring(dot + 1).trim();
+    if (RegExp(r'^[A-Za-z0-9]{2,8}$').hasMatch(ext)) {
+      return ext;
+    }
+    return '';
+  }
+
+  String _buildQualitySizeText(
+    Map<String, dynamic> item,
+    String fallbackTitle,
+  ) {
+    final quality = _resolveRealQuality(item, fallbackTitle);
+    final rawSize = _resolveDisplaySize(item);
+    final hasSize = rawSize.isNotEmpty && rawSize != '--' && rawSize != '—';
+
+    if (quality.isNotEmpty && hasSize) return '$quality • $rawSize';
+    if (quality.isNotEmpty) return quality;
+    if (hasSize) return rawSize;
+    return '--';
+  }
+
+  String _resolveDisplaySize(Map<String, dynamic> item) {
+    final savedSize = (item['size'] ?? '').toString().trim();
+    final needsLookup =
+        savedSize.isEmpty ||
+        savedSize == '--' ||
+        savedSize == '—' ||
+        savedSize.toLowerCase() == 'complete';
+
+    if (!needsLookup) return savedSize;
+
+    final rawTitle = (item['title'] ?? '').toString().trim();
+    if (rawTitle.isEmpty) return '--';
+
+    final settingsCtrl = Get.isRegistered<SettingsController>()
+        ? Get.find<SettingsController>()
+        : null;
+    final folder =
+        settingsCtrl?.defaultLocation.value ??
+        r'C:\Users\Public\Downloads\MediaTube';
+
+    try {
+      final file = File(p.join(folder, rawTitle));
+      if (file.existsSync()) {
+        return _formatBytes(file.lengthSync());
+      }
+    } catch (_) {}
+
+    return savedSize.toLowerCase() == 'complete' ? '--' : savedSize;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var value = bytes.toDouble();
+    var index = 0;
+
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index++;
+    }
+
+    final precision = value >= 100 ? 0 : (value >= 10 ? 1 : 2);
+    return '${value.toStringAsFixed(precision)} ${units[index]}';
+  }
+
+  String _resolveRealQuality(Map<String, dynamic> item, String fallbackTitle) {
+    final candidates = <String>[
+      (item['actualQuality'] ?? '').toString(),
+      (item['quality'] ?? '').toString(),
+      fallbackTitle,
+    ];
+
+    for (final raw in candidates) {
+      final q = raw.trim();
+      if (q.isEmpty) continue;
+
+      final normalized = q.replaceAll('_', ' ');
+      final pMatch = RegExp(
+        r'(\d{3,4}p)',
+        caseSensitive: false,
+      ).firstMatch(normalized);
+      if (pMatch != null) {
+        return pMatch.group(1)!.toLowerCase();
+      }
+
+      final lowered = normalized.toLowerCase();
+      if (lowered.contains('8k')) return '4320p';
+      if (lowered.contains('4k')) return '2160p';
+      if (lowered.contains('audio')) return 'Audio';
+    }
+
+    return '';
+  }
+
+  bool _isAudioFormat(String format) {
+    final lowered = format.toLowerCase();
+    return lowered == 'mp3' ||
+        lowered == 'm4a' ||
+        lowered == 'aac' ||
+        lowered == 'wav' ||
+        lowered == 'flac' ||
+        lowered == 'ogg';
   }
 }
