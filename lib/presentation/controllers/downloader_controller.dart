@@ -152,7 +152,12 @@ class DownloaderController extends GetxController {
     final outputFolder =
         settingsController?.defaultLocation.value ??
         r'C:\Users\Public\Downloads\MediaTube';
-    final qualityLabel = settingsController?.quality.value ?? 'MediaTube';
+    // Prefer per-task selected quality if present, otherwise use global setting
+    final taskSelectedQuality = task.metadata?['selectedQuality'] as String?;
+    final qualityLabel =
+        (taskSelectedQuality != null && taskSelectedQuality.isNotEmpty)
+        ? taskSelectedQuality
+        : (settingsController?.quality.value ?? 'MediaTube');
     final qualityMode =
         settingsController?.videoQualityMode.value ??
         'Probing the video quality';
@@ -189,7 +194,7 @@ class DownloaderController extends GetxController {
                 historyController?.addFinishedTask(
                   updatedTask.filename,
                   updatedTask.url,
-                  settingsController?.quality.value ?? qualityFormat,
+                  qualityLabel,
                   false,
                   'Complete',
                   updatedTask.channel,
@@ -409,7 +414,10 @@ class DownloaderController extends GetxController {
 
   void togglePlaylistItemSelection(String parentId, String childId) {
     final set = _selectedPlaylistItems.putIfAbsent(parentId, () => <String>{});
-    if (set.contains(childId)) set.remove(childId); else set.add(childId);
+    if (set.contains(childId))
+      set.remove(childId);
+    else
+      set.add(childId);
     // trigger reactivity by touching the parent task (no-op copy)
     final idx = downloadQueue.indexWhere((t) => t.id == parentId);
     if (idx != -1) {
