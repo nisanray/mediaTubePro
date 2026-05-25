@@ -6,6 +6,7 @@ import '../../../domain/entities/download_task.dart';
 import '../../controllers/downloader_controller.dart';
 import 'widgets/playlist_item_tile.dart';
 import 'widgets/playlist_selection_dialog.dart';
+import '../../../core/theme/spacing.dart';
 
 class DownloadDetailsPage extends StatelessWidget {
   const DownloadDetailsPage({super.key});
@@ -43,17 +44,17 @@ class DownloadDetailsPage extends StatelessWidget {
         final playlistItems = task.items ?? const <DownloadTask>[];
 
         return Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(Spacing.page),
           child: ListView(
             children: [
               Text(
                 task.filename,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: Spacing.small),
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: Spacing.small,
+                runSpacing: Spacing.small,
                 children: [
                   Chip(label: Text(task.status.name)),
                   Chip(
@@ -65,11 +66,11 @@ class DownloadDetailsPage extends StatelessWidget {
                   Chip(label: Text(task.speed)),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: Spacing.medium),
               // Action row (wrap to avoid overflow on narrow viewports)
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: Spacing.small,
+                runSpacing: Spacing.small,
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
@@ -112,7 +113,6 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.copy),
                     label: const Text('Copy URL'),
                   ),
-                  
                   // Rename
                   OutlinedButton.icon(
                     onPressed: () async {
@@ -149,7 +149,7 @@ class DownloadDetailsPage extends StatelessWidget {
                     label: const Text('Rename'),
                   ),
                   // Quality picker
-                  const SizedBox(width: 6),
+                  const SizedBox(width: Spacing.small),
                   OutlinedButton.icon(
                     onPressed: () async {
                       final options = [

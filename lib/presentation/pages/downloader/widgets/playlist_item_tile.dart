@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import '../../../../domain/entities/download_task.dart';
 import '../../../controllers/downloader_controller.dart';
+import '../../../../core/theme/spacing.dart';
 
 class PlaylistItemTile extends StatelessWidget {
   const PlaylistItemTile({super.key, required this.task});
@@ -16,7 +17,10 @@ class PlaylistItemTile extends StatelessWidget {
         : null;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: Spacing.small),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Spacing.cardRadius),
+      ),
       child: ListTile(
         dense: true,
         title: Text(
@@ -28,11 +32,11 @@ class PlaylistItemTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 2),
+            const SizedBox(height: Spacing.xsmall),
             Text('Status: ${task.status.name}'),
             Text('Progress: ${(task.progress * 100).toInt()}%'),
             Padding(
-              padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
+              padding: const EdgeInsets.only(top: Spacing.xsmall, bottom: Spacing.xsmall),
               child: LinearProgressIndicator(value: task.progress),
             ),
             Text('Speed: ${task.speed}'),

@@ -7,6 +7,7 @@ import '../../controllers/downloader_controller.dart';
 import 'dart:io';
 import '../../widgets/shared/glass_panel.dart';
 import '../../widgets/shared/mac_button.dart';
+import '../../../core/theme/spacing.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -96,9 +97,9 @@ class HistoryPage extends StatelessWidget {
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
+                                horizontal: Spacing.chipHorizontal,
+                                vertical: Spacing.chipVertical,
+                              ),
                           decoration: BoxDecoration(
                             color: backgroundColor,
                             borderRadius: BorderRadius.circular(999),

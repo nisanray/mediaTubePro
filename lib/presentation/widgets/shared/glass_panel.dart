@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/spacing.dart';
 
 class GlassPanel extends StatelessWidget {
   final Widget child;
@@ -11,8 +12,8 @@ class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(12.0),
-    this.borderRadius = 12.0,
+    this.padding = const EdgeInsets.all(Spacing.panel),
+    this.borderRadius = Spacing.cardRadius,
     this.withShadow = true,
   });
 
