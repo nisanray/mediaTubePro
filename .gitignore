@@ -73,3 +73,7 @@ windows/flutter/ephemeral/
 
 # Ignore local `yt` reference app folder
 yt/
+
+# Local feature/scenario notes (not for repo)
+APP_FEATURES_AND_SCENARIOS.md
+RECENT_FEATURES_AND_SCENARIOS.md
