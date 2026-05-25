@@ -388,6 +388,81 @@ class DownloaderController extends GetxController {
     downloadQueue.removeWhere((t) => t.id == taskId);
   }
 
+  // --- Per-task utility methods ---
+  void renameTask(String taskId, String newName) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+    downloadQueue[idx] = downloadQueue[idx].copyWith(filename: newName);
+  }
+
+  void changeTaskQuality(String taskId, String qualityLabel) {
+    final idx = downloadQueue.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+    final existing = downloadQueue[idx];
+    final meta = Map<String, dynamic>.from(existing.metadata ?? {});
+    meta['selectedQuality'] = qualityLabel;
+    downloadQueue[idx] = existing.copyWith(metadata: meta);
+  }
+
+  // Playlist selection state: map parent task id -> set of selected child ids
+  final Map<String, Set<String>> _selectedPlaylistItems = {};
+
+  void togglePlaylistItemSelection(String parentId, String childId) {
+    final set = _selectedPlaylistItems.putIfAbsent(parentId, () => <String>{});
+    if (set.contains(childId)) set.remove(childId); else set.add(childId);
+    // trigger reactivity by touching the parent task (no-op copy)
+    final idx = downloadQueue.indexWhere((t) => t.id == parentId);
+    if (idx != -1) {
+      downloadQueue[idx] = downloadQueue[idx].copyWith();
+    }
+  }
+
+  void selectAllPlaylistItems(String parentId, bool select) {
+    final idx = downloadQueue.indexWhere((t) => t.id == parentId);
+    if (idx == -1) return;
+    final items = downloadQueue[idx].items ?? const <DownloadTask>[];
+    if (select) {
+      _selectedPlaylistItems[parentId] = items.map((e) => e.id).toSet();
+    } else {
+      _selectedPlaylistItems.remove(parentId);
+    }
+    downloadQueue[idx] = downloadQueue[idx].copyWith();
+  }
+
+  Set<String> selectedPlaylistItems(String parentId) {
+    return _selectedPlaylistItems[parentId] ?? <String>{};
+  }
+
+  Future<void> queueSelectedPlaylistItems(String parentId) async {
+    final idx = downloadQueue.indexWhere((t) => t.id == parentId);
+    if (idx == -1) return;
+    final parent = downloadQueue[idx];
+    final items = parent.items ?? const <DownloadTask>[];
+    final selected = _selectedPlaylistItems[parentId] ?? <String>{};
+    if (selected.isEmpty) return;
+
+    for (final child in items) {
+      if (!selected.contains(child.id)) continue;
+      final newTask = DownloadTask(
+        id: const Uuid().v4(),
+        url: child.url,
+        filename: child.filename,
+        status: DownloadStatus.pending,
+        singleVideoOnly: true,
+        channel: child.channel,
+        thumbnail: child.thumbnail,
+        metadata: child.metadata,
+      );
+      downloadQueue.insert(0, newTask);
+    }
+
+    // Clear selection after queueing
+    _selectedPlaylistItems.remove(parentId);
+    // Persist and try schedule
+    _persistQueue();
+    _scheduleNext();
+  }
+
   Future<Map<String, int>> clearCancelledTasks({
     bool deleteFiles = false,
   }) async {

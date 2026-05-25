@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/download_task.dart';
 import '../../controllers/downloader_controller.dart';
 import 'widgets/playlist_item_tile.dart';
+import 'widgets/playlist_selection_dialog.dart';
 
 class DownloadDetailsPage extends StatelessWidget {
   const DownloadDetailsPage({super.key});
@@ -115,6 +116,80 @@ class DownloadDetailsPage extends StatelessWidget {
                     icon: const Icon(Icons.copy),
                     label: const Text('Copy URL'),
                   ),
+                  const SizedBox(width: 8),
+                  // Rename
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final ctrlLocal = ctrl;
+                      final name = await Get.dialog<String>(
+                        AlertDialog(
+                          title: const Text('Rename output'),
+                          content: TextField(
+                            autofocus: true,
+                            controller: TextEditingController(text: task.filename),
+                            onSubmitted: (v) => Get.back(result: v),
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+                            ElevatedButton(onPressed: () => Get.back(result: null), child: const Text('OK')),
+                          ],
+                        ),
+                      );
+                      if (name != null && name.isNotEmpty && ctrlLocal != null) {
+                        ctrlLocal.renameTask(task.id, name);
+                      }
+                    },
+                    icon: const Icon(Icons.drive_file_rename_outline),
+                    label: const Text('Rename'),
+                  ),
+                  // Quality picker
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final options = [
+                        'Best Available (4K/8K)',
+                        '1080p Premium',
+                        '720p Standard',
+                        'Audio Only',
+                      ];
+                      final picked = await Get.dialog<String>(
+                        AlertDialog(
+                          title: const Text('Choose quality'),
+                          content: SizedBox(
+                            width: 300,
+                            child: ListView(
+                              shrinkWrap: true,
+                              children: options
+                                  .map(
+                                    (o) => RadioListTile<String>(
+                                      value: o,
+                                      groupValue: task.metadata?['selectedQuality'] as String?,
+                                      title: Text(o),
+                                      onChanged: (v) => Get.back(result: v),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ),
+                      );
+                      if (picked != null && ctrl != null) {
+                        ctrl.changeTaskQuality(task.id, picked);
+                        Get.snackbar('Quality', 'Selected: $picked');
+                      }
+                    },
+                    icon: const Icon(Icons.high_quality),
+                    label: const Text('Quality'),
+                  ),
+                  // Select items (for playlists)
+                  if (!task.singleVideoOnly) ...[
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        await Get.dialog(PlaylistSelectionDialog(parent: task));
+                      },
+                      icon: const Icon(Icons.playlist_play),
+                      label: const Text('Select items'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 18),
