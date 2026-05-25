@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/download_task.dart';
 import '../../controllers/downloader_controller.dart';
@@ -61,6 +62,57 @@ class DownloadDetailsPage extends StatelessWidget {
                   ),
                   Chip(label: Text('${(task.progress * 100).toInt()}%')),
                   Chip(label: Text(task.speed)),
+                ],
+              ),
+              const SizedBox(height: 18),
+              // Action row
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (ctrl != null) ctrl.resumeTask(task.id);
+                    },
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Resume'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (ctrl != null) ctrl.cancelTask(task.id);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                    ),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (ctrl != null) ctrl.retryTask(task.id);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      if (ctrl != null) {
+                        await ctrl.openFolderForTask(task.id);
+                      }
+                    },
+                    icon: const Icon(Icons.folder_open),
+                    label: const Text('Open Folder'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: task.url));
+                      Get.snackbar('Copied', 'URL copied to clipboard');
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy URL'),
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
