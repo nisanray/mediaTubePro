@@ -8,6 +8,7 @@ class GlassPanel extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double borderRadius;
   final bool withShadow;
+  final Color? accentColor;
 
   const GlassPanel({
     super.key,
@@ -15,6 +16,7 @@ class GlassPanel extends StatelessWidget {
     this.padding = const EdgeInsets.all(Spacing.panel),
     this.borderRadius = Spacing.cardRadius,
     this.withShadow = true,
+    this.accentColor,
   });
 
   @override
@@ -46,7 +48,33 @@ class GlassPanel extends StatelessWidget {
                   ]
                 : [],
           ),
-          child: child,
+          child: Stack(
+            children: [
+              if (accentColor != null)
+                Positioned(
+                  top: -22,
+                  right: -22,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 86,
+                      height: 86,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accentColor!.withOpacity(0.18),
+                            accentColor!.withOpacity(0.05),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.55, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              child,
+            ],
+          ),
         ),
       ),
     );

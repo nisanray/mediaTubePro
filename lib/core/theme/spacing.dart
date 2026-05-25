@@ -16,5 +16,6 @@ class Spacing {
   static const double chipVertical = 8.0;
 
   // Card / panel radius
-  static const double cardRadius = 10.0;
+  // Increased to 12.0 for a slightly softer, more macOS-like rounded appearance
+  static const double cardRadius = 12.0;
 }

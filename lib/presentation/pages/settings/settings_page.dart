@@ -61,6 +61,7 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildGeneralCard(SettingsController controller) {
     return GlassPanel(
+      accentColor: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -127,6 +128,7 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildVideoAudioCard(SettingsController controller) {
     return GlassPanel(
+      accentColor: AppColors.secondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -158,6 +160,7 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildAdvancedCard(SettingsController controller) {
     return GlassPanel(
+      accentColor: AppColors.tertiary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -350,6 +353,7 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildAppearanceCard(SettingsController controller) {
     return GlassPanel(
+      accentColor: AppColors.primaryContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
