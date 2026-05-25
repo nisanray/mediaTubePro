@@ -22,7 +22,7 @@ class HistoryPage extends StatelessWidget {
     final controller = Get.put(HistoryController());
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -69,7 +69,7 @@ class HistoryPage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Obx(() {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -205,9 +205,9 @@ class HistoryPage extends StatelessWidget {
             );
           }),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Glass Panel Table
           Expanded(

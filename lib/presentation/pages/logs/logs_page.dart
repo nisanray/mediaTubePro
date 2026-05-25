@@ -43,7 +43,7 @@ class _LogsPageState extends State<LogsPage> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -95,7 +95,7 @@ class _LogsPageState extends State<LogsPage> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Terminal Window
           Expanded(
@@ -214,8 +214,8 @@ class _LogsPageState extends State<LogsPage> {
                             if (index == controller.logs.length) {
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                    vertical: 12,
+                                  ),
                                 child: Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,

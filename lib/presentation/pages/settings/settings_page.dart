@@ -17,13 +17,13 @@ class SettingsPage extends StatelessWidget {
     final controller = Get.put(SettingsController());
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Text('Preferences', style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Two-Column Layout
           Expanded(
@@ -35,18 +35,18 @@ class SettingsPage extends StatelessWidget {
                   child: ListView(
                     children: [
                       _buildGeneralCard(controller),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _buildAdvancedCard(controller),
                     ],
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 // Right Column
                 Expanded(
                   child: ListView(
                     children: [
                       _buildVideoAudioCard(controller),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _buildAppearanceCard(controller),
                     ],
                   ),
@@ -102,19 +102,19 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildToggleRow(
             'Launch at Login',
             'Start MediaTube automatically',
             controller.launchAtLogin,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildToggleRow(
             'Notifications',
             'Show alerts when done',
             controller.notifications,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildToggleRow(
             'Force Kill on Cancel',
             'Instantly terminate yt-dlp + child processes',
