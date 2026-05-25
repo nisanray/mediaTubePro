@@ -42,12 +42,19 @@ class PlaylistItemTile extends StatelessWidget {
               Text('Status: ${task.status.name}'),
               Text('Progress: ${(task.progress * 100).toInt()}%'),
               Padding(
-                padding: const EdgeInsets.only(top: Spacing.xsmall, bottom: Spacing.xsmall),
+                padding: const EdgeInsets.only(
+                  top: Spacing.xsmall,
+                  bottom: Spacing.xsmall,
+                ),
                 child: LinearProgressIndicator(value: task.progress),
               ),
               Text('Speed: ${task.speed}'),
               if ((task.channel ?? '').isNotEmpty)
-                Text(task.channel!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  task.channel!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               if (task.url.isNotEmpty)
                 Text(task.url, maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
@@ -57,9 +64,13 @@ class PlaylistItemTile extends StatelessWidget {
             children: [
               // Single button toggles pause/resume depending on state
               IconButton(
-                tooltip: task.status == DownloadStatus.downloading ? 'Pause' : 'Resume',
+                tooltip: task.status == DownloadStatus.downloading
+                    ? 'Pause'
+                    : 'Resume',
                 icon: Icon(
-                  task.status == DownloadStatus.downloading ? Icons.pause : Icons.play_arrow,
+                  task.status == DownloadStatus.downloading
+                      ? Icons.pause
+                      : Icons.play_arrow,
                 ),
                 onPressed: () {
                   if (ctrl == null) return;
@@ -94,7 +105,10 @@ class PlaylistItemTile extends StatelessWidget {
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'cancel', child: Text('Cancel')),
                   const PopupMenuItem(value: 'retry', child: Text('Retry')),
-                  const PopupMenuItem(value: 'open', child: Text('Open folder')),
+                  const PopupMenuItem(
+                    value: 'open',
+                    child: Text('Open folder'),
+                  ),
                   const PopupMenuItem(value: 'copy', child: Text('Copy URL')),
                 ],
               ),

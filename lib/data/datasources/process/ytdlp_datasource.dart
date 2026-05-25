@@ -26,8 +26,10 @@ class YtDlpDatasource {
     String? outputNameOverride,
   }) async* {
     Process? startedProcess;
-    final safeQualityLabel = _sanitizeFilenamePart(qualityLabel);
-    final safeAppName = _sanitizeFilenamePart(_appName);
+    final safeQualityLabel = _sanitizeFilenamePart(
+      qualityLabel,
+    ).replaceAll(' ', '_');
+    final safeAppName = _sanitizeFilenamePart(_appName).replaceAll(' ', '_');
     final safeOutputName = _sanitizeFilenamePart(outputNameOverride ?? '');
     final filenameStem = safeOutputName.isNotEmpty
         ? safeOutputName
@@ -40,7 +42,7 @@ class YtDlpDatasource {
       '--ignore-errors',
       '--no-colors',
       '-o',
-      '$outputFolder/$filenameStem [$safeAppName] [$safeQualityLabel].%(ext)s',
+      '$outputFolder/${filenameStem}_$safeQualityLabel_$safeAppName.%(ext)s',
     ];
 
     if (extractAudio) {

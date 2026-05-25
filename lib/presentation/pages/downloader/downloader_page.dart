@@ -608,237 +608,286 @@ class DownloaderPage extends StatelessWidget {
             ),
           ),
 
-          // Action Button / Menu
+          // Action Button: quick pause/resume + overflow menu
           SizedBox(
-            width: 60,
+            width: 100,
             child: Align(
               alignment: Alignment.center,
-              child: PopupMenuButton<String>(
-                icon: Icon(
-                  isDone
-                      ? Icons.folder_open
-                      : (hasError
-                            ? Icons.refresh
-                            : (isCancelled
-                                  ? Icons.play_arrow
-                                  : Icons.more_vert)),
-                  size: 16,
-                ),
-                onSelected: (value) async {
-                  final controller = Get.find<DownloaderController>();
-                  if (value == 'open') {
-                    await controller.openFolderForTask(item.id);
-                  } else if (value == 'details') {
-                    Get.toNamed('/download-details', arguments: item);
-                  } else if (value == 'copy_url') {
-                    await Clipboard.setData(ClipboardData(text: item.url));
-                    Get.snackbar(
-                      'Copied',
-                      'URL copied to clipboard',
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
-                  } else if (value == 'cancel') {
-                    controller.cancelTask(item.id);
-                  } else if (value == 'resume') {
-                    controller.resumeTask(item.id);
-                  } else if (value == 'retry') {
-                    controller.retryTask(item.id);
-                  } else if (value == 'restart') {
-                    controller.restartTask(item.id);
-                  } else if (value == 'move_top') {
-                    controller.moveTaskToTop(item.id);
-                  } else if (value == 'move_bottom') {
-                    controller.moveTaskToBottom(item.id);
-                  } else if (value == 'remove') {
-                    controller.removeTask(item.id);
-                  } else if (value == 'logs') {
-                    // Read logs from the task's log file asynchronously and show dialog
-                    if (item.logPath != null) {
-                      try {
-                        final f = File(item.logPath!);
-                        if (await f.exists()) {
-                          final lines = await f.readAsLines();
-                          final parsedEntries = lines
-                              .map(
-                                (line) => LogsController.parseLogLine(
-                                  line,
-                                  fallbackSource: 'task:${item.id}',
-                                ),
-                              )
-                              .toList();
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: isDownloading ? 'Pause' : 'Resume',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 28,
+                    ),
+                    icon: Icon(
+                      isDownloading ? Icons.pause : Icons.play_arrow,
+                      size: 15,
+                    ),
+                    onPressed: () {
+                      final controller = Get.find<DownloaderController>();
+                      if (isDownloading) {
+                        controller.cancelTask(item.id);
+                      } else {
+                        controller.resumeTask(item.id);
+                      }
+                    },
+                  ),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 28,
+                    ),
+                    icon: Icon(
+                      isDone
+                          ? Icons.folder_open
+                          : (hasError
+                                ? Icons.refresh
+                                : (isCancelled
+                                      ? Icons.play_arrow
+                                      : Icons.more_vert)),
+                      size: 15,
+                    ),
+                    onSelected: (value) async {
+                      final controller = Get.find<DownloaderController>();
+                      if (value == 'open') {
+                        await controller.openFolderForTask(item.id);
+                      } else if (value == 'details') {
+                        Get.toNamed('/download-details', arguments: item);
+                      } else if (value == 'copy_url') {
+                        await Clipboard.setData(ClipboardData(text: item.url));
+                        Get.snackbar(
+                          'Copied',
+                          'URL copied to clipboard',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      } else if (value == 'cancel') {
+                        controller.cancelTask(item.id);
+                      } else if (value == 'resume') {
+                        controller.resumeTask(item.id);
+                      } else if (value == 'retry') {
+                        controller.retryTask(item.id);
+                      } else if (value == 'restart') {
+                        controller.restartTask(item.id);
+                      } else if (value == 'move_top') {
+                        controller.moveTaskToTop(item.id);
+                      } else if (value == 'move_bottom') {
+                        controller.moveTaskToBottom(item.id);
+                      } else if (value == 'remove') {
+                        controller.removeTask(item.id);
+                      } else if (value == 'logs') {
+                        // Read logs from the task's log file asynchronously and show dialog
+                        if (item.logPath != null) {
+                          try {
+                            final f = File(item.logPath!);
+                            if (await f.exists()) {
+                              final lines = await f.readAsLines();
+                              final parsedEntries = lines
+                                  .map(
+                                    (line) => LogsController.parseLogLine(
+                                      line,
+                                      fallbackSource: 'task:${item.id}',
+                                    ),
+                                  )
+                                  .toList();
 
-                          if (parsedEntries.isNotEmpty) {
-                            final logsController = Get.put(LogsController());
+                              if (parsedEntries.isNotEmpty) {
+                                final logsController = Get.put(
+                                  LogsController(),
+                                );
 
-                            await showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Logs'),
-                                content: SizedBox(
-                                  width: 600,
-                                  height: 300,
-                                  child: SelectionArea(
-                                    child: SingleChildScrollView(
-                                      child: SelectableText.rich(
-                                        TextSpan(
-                                          children: parsedEntries
-                                              .map(
-                                                (entry) => TextSpan(
-                                                  children: [
-                                                    TextSpan(
-                                                      text:
-                                                          '${entry.timestamp} ',
-                                                      style: const TextStyle(
-                                                        fontFamily:
-                                                            'JetBrains Mono',
-                                                      ),
+                                await showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Logs'),
+                                    content: SizedBox(
+                                      width: 600,
+                                      height: 300,
+                                      child: SelectionArea(
+                                        child: SingleChildScrollView(
+                                          child: SelectableText.rich(
+                                            TextSpan(
+                                              children: parsedEntries
+                                                  .map(
+                                                    (entry) => TextSpan(
+                                                      children: [
+                                                        TextSpan(
+                                                          text:
+                                                              '${entry.timestamp} ',
+                                                          style: const TextStyle(
+                                                            fontFamily:
+                                                                'JetBrains Mono',
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text:
+                                                              '[${entry.level}] ',
+                                                          style: const TextStyle(
+                                                            fontFamily:
+                                                                'JetBrains Mono',
+                                                          ),
+                                                        ),
+                                                        TextSpan(
+                                                          text:
+                                                              '${entry.message}\n',
+                                                          style: const TextStyle(
+                                                            fontFamily:
+                                                                'JetBrains Mono',
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                    TextSpan(
-                                                      text: '[${entry.level}] ',
-                                                      style: const TextStyle(
-                                                        fontFamily:
-                                                            'JetBrains Mono',
-                                                      ),
-                                                    ),
-                                                    TextSpan(
-                                                      text:
-                                                          '${entry.message}\n',
-                                                      style: const TextStyle(
-                                                        fontFamily:
-                                                            'JetBrains Mono',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )
-                                              .toList(),
+                                                  )
+                                                  .toList(),
+                                            ),
+                                            style: const TextStyle(
+                                              fontFamily: 'JetBrains Mono',
+                                              fontSize: 13,
+                                            ),
+                                            onSelectionChanged:
+                                                (selection, cause) {
+                                                  if (selection.baseOffset <
+                                                          0 ||
+                                                      selection.extentOffset <
+                                                          0) {
+                                                    logsController
+                                                        .updateSelectedText('');
+                                                    return;
+                                                  }
+
+                                                  final start = selection.start;
+                                                  final end = selection.end;
+                                                  if (start == end) {
+                                                    logsController
+                                                        .updateSelectedText('');
+                                                    return;
+                                                  }
+
+                                                  final plain = parsedEntries
+                                                      .map(
+                                                        LogsController
+                                                            .formatLogEntry,
+                                                      )
+                                                      .join('\n');
+                                                  logsController
+                                                      .updateSelectedText(
+                                                        plain,
+                                                      );
+                                                },
+                                          ),
                                         ),
-                                        style: const TextStyle(
-                                          fontFamily: 'JetBrains Mono',
-                                          fontSize: 13,
-                                        ),
-                                        onSelectionChanged: (selection, cause) {
-                                          if (selection.baseOffset < 0 ||
-                                              selection.extentOffset < 0) {
-                                            logsController.updateSelectedText(
-                                              '',
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Close'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          final txt =
+                                              logsController.selectedText.value;
+                                          if (txt.isNotEmpty) {
+                                            Clipboard.setData(
+                                              ClipboardData(text: txt),
                                             );
-                                            return;
-                                          }
-
-                                          final start = selection.start;
-                                          final end = selection.end;
-                                          if (start == end) {
-                                            logsController.updateSelectedText(
-                                              '',
+                                            Get.snackbar(
+                                              'Copied',
+                                              'Selected text copied to clipboard',
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
                                             );
-                                            return;
                                           }
-
-                                          // Copy-friendly: store full line when any
-                                          // portion is selected so badges are included
-                                          // by the one-click Copy Selected action.
-                                          final plain = parsedEntries
+                                        },
+                                        child: const Text('Copy Selected'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          final all = parsedEntries
                                               .map(
                                                 LogsController.formatLogEntry,
                                               )
                                               .join('\n');
-                                          // Try to infer which line was selected by
-                                          // mapping offsets into the joined plain text.
-                                          // For simplicity, copy the entire plain
-                                          // content when selection exists.
-                                          logsController.updateSelectedText(
-                                            plain,
+                                          Clipboard.setData(
+                                            ClipboardData(text: all),
+                                          );
+                                          Get.snackbar(
+                                            'Copied',
+                                            'All logs copied to clipboard',
+                                            snackPosition: SnackPosition.BOTTOM,
                                           );
                                         },
+                                        child: const Text('Copy All'),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('Close'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      final txt =
-                                          logsController.selectedText.value;
-                                      if (txt.isNotEmpty) {
-                                        Clipboard.setData(
-                                          ClipboardData(text: txt),
-                                        );
-                                        Get.snackbar(
-                                          'Copied',
-                                          'Selected text copied to clipboard',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                        );
-                                      }
-                                    },
-                                    child: const Text('Copy Selected'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      final all = parsedEntries
-                                          .map(LogsController.formatLogEntry)
-                                          .join('\n');
-                                      Clipboard.setData(
-                                        ClipboardData(text: all),
-                                      );
-                                      Get.snackbar(
-                                        'Copied',
-                                        'All logs copied to clipboard',
-                                        snackPosition: SnackPosition.BOTTOM,
-                                      );
-                                    },
-                                    child: const Text('Copy All'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            // end dialog
-                          }
+                                );
+                              }
+                            }
+                          } catch (_) {}
                         }
-                      } catch (_) {}
-                    }
-                  }
-                },
-                itemBuilder: (ctx) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem(value: 'details', child: Text('Details')),
-                  const PopupMenuItem(
-                    value: 'copy_url',
-                    child: Text('Copy URL'),
+                      }
+                    },
+                    itemBuilder: (ctx) => <PopupMenuEntry<String>>[
+                      const PopupMenuItem(
+                        value: 'details',
+                        child: Text('Details'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'copy_url',
+                        child: Text('Copy URL'),
+                      ),
+                      const PopupMenuDivider(),
+                      if (isDone)
+                        const PopupMenuItem(
+                          value: 'open',
+                          child: Text('Open Folder'),
+                        ),
+                      if (!isDone && !isCancelled)
+                        const PopupMenuItem(
+                          value: 'cancel',
+                          child: Text('Cancel'),
+                        ),
+                      if (isCancelled)
+                        const PopupMenuItem(
+                          value: 'resume',
+                          child: Text('Resume'),
+                        ),
+                      if (hasError)
+                        const PopupMenuItem(
+                          value: 'retry',
+                          child: Text('Retry'),
+                        ),
+                      if (!isDownloading)
+                        const PopupMenuItem(
+                          value: 'restart',
+                          child: Text('Restart'),
+                        ),
+                      if (!isDownloading)
+                        const PopupMenuItem(
+                          value: 'move_top',
+                          child: Text('Move to Top'),
+                        ),
+                      if (!isDownloading)
+                        const PopupMenuItem(
+                          value: 'move_bottom',
+                          child: Text('Move to Bottom'),
+                        ),
+                      if (isDone || isCancelled || hasError)
+                        const PopupMenuItem(
+                          value: 'remove',
+                          child: Text('Remove'),
+                        ),
+                      const PopupMenuItem(
+                        value: 'logs',
+                        child: Text('Show Logs'),
+                      ),
+                    ],
                   ),
-                  const PopupMenuDivider(),
-                  if (isDone)
-                    const PopupMenuItem(
-                      value: 'open',
-                      child: Text('Open Folder'),
-                    ),
-                  if (!isDone && !isCancelled)
-                    const PopupMenuItem(value: 'cancel', child: Text('Cancel')),
-                  if (isCancelled)
-                    const PopupMenuItem(value: 'resume', child: Text('Resume')),
-                  if (hasError)
-                    const PopupMenuItem(value: 'retry', child: Text('Retry')),
-                  if (!isDownloading)
-                    const PopupMenuItem(
-                      value: 'restart',
-                      child: Text('Restart'),
-                    ),
-                  if (!isDownloading)
-                    const PopupMenuItem(
-                      value: 'move_top',
-                      child: Text('Move to Top'),
-                    ),
-                  if (!isDownloading)
-                    const PopupMenuItem(
-                      value: 'move_bottom',
-                      child: Text('Move to Bottom'),
-                    ),
-                  if (isDone || isCancelled || hasError)
-                    const PopupMenuItem(value: 'remove', child: Text('Remove')),
-                  const PopupMenuItem(value: 'logs', child: Text('Show Logs')),
                 ],
               ),
             ),

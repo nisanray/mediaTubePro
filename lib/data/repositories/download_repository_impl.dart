@@ -374,7 +374,12 @@ class DownloadRepositoryImpl {
 
     // Avoid double-appending if already contains app name
     final appTag = 'MediaTube';
-    var decorated = '$displayName [$q] - $appTag$ext';
+    if (baseFilename.toLowerCase().contains(appTag.toLowerCase())) {
+      return baseFilename;
+    }
+
+    final qSanitized = q.replaceAll(' ', '_');
+    var decorated = '${displayName}_$qSanitized_$appTag$ext';
     return decorated;
   }
 }
