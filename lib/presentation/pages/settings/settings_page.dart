@@ -8,6 +8,7 @@ import '../../widgets/shared/mac_button.dart';
 import '../../widgets/shared/mac_dropdown.dart';
 import '../../widgets/shared/mac_switch.dart';
 import '../../widgets/shared/mac_text_field.dart';
+import '../../../core/theme/spacing.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -65,7 +66,7 @@ class SettingsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCardHeader(Icons.tune, 'General'),
-          const SizedBox(height: 16),
+          const SizedBox(height: Spacing.medium),
           ExpansionTile(
             initiallyExpanded: true,
             title: const Text(
@@ -74,51 +75,48 @@ class SettingsPage extends StatelessWidget {
             ),
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Obx(
-                        () => MacTextField(
-                          hintText: '',
-                          controller: TextEditingController(
-                            text: controller.defaultLocation.value,
-                          ),
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.panel),
+                child: _fieldRow(
+                  'Save Location',
+                  Obx(() => MacTextField(
+                        hintText: '',
+                        controller: TextEditingController(
+                          text: controller.defaultLocation.value,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    MacButton(
-                      text: 'Browse...',
-                      onPressed: () async {
-                        final directoryPath = await getDirectoryPath();
-                        if (directoryPath != null && directoryPath.isNotEmpty) {
-                          controller.defaultLocation.value = directoryPath;
-                        }
-                      },
-                    ),
-                  ],
+                      )),
+                  trailing: MacButton(
+                    text: 'Browse...',
+                    onPressed: () async {
+                      final directoryPath = await getDirectoryPath();
+                      if (directoryPath != null && directoryPath.isNotEmpty) {
+                        controller.defaultLocation.value = directoryPath;
+                      }
+                    },
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _buildToggleRow(
+          const SizedBox(height: Spacing.medium),
+          _fieldRow(
             'Launch at Login',
-            'Start MediaTube automatically',
-            controller.launchAtLogin,
+            const SizedBox.shrink(),
+            trailing: Obx(() => MacSwitch(value: controller.launchAtLogin.value, onChanged: (v) => controller.launchAtLogin.value = v)),
+            subtitle: 'Start MediaTube automatically',
           ),
-          const SizedBox(height: 10),
-          _buildToggleRow(
+          const SizedBox(height: Spacing.small),
+          _fieldRow(
             'Notifications',
-            'Show alerts when done',
-            controller.notifications,
+            const SizedBox.shrink(),
+            trailing: Obx(() => MacSwitch(value: controller.notifications.value, onChanged: (v) => controller.notifications.value = v)),
+            subtitle: 'Show alerts when done',
           ),
-          const SizedBox(height: 10),
-          _buildToggleRow(
+          const SizedBox(height: Spacing.small),
+          _fieldRow(
             'Force Kill on Cancel',
-            'Instantly terminate yt-dlp + child processes',
-            controller.forceKillOnCancel,
+            const SizedBox.shrink(),
+            trailing: Obx(() => MacSwitch(value: controller.forceKillOnCancel.value, onChanged: (v) => controller.forceKillOnCancel.value = v)),
+            subtitle: 'Instantly terminate yt-dlp + child processes',
           ),
         ],
       ),
@@ -131,26 +129,14 @@ class SettingsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCardHeader(Icons.movie_outlined, 'Video & Audio'),
-          const SizedBox(height: 16),
-          _buildDropdownRow(
-            'Quality',
-            controller.quality,
-            controller.qualityOptions,
-          ),
-          const SizedBox(height: 12),
-          _buildDropdownRow(
-            'Quality Mode',
-            controller.videoQualityMode,
-            controller.videoQualityModeOptions,
-          ),
-          const SizedBox(height: 12),
-          _buildDropdownRow(
-            'Format',
-            controller.format,
-            controller.formatOptions,
-          ),
-          const SizedBox(height: 12),
-          _buildDropdownRow('Codec', controller.codec, controller.codecOptions),
+          const SizedBox(height: Spacing.medium),
+          _fieldRow('Quality', Obx(() => MacDropdown(value: controller.quality.value, items: controller.qualityOptions, onChanged: (v) { if (v != null) controller.quality.value = v; }))),
+          const SizedBox(height: Spacing.small),
+          _fieldRow('Quality Mode', Obx(() => MacDropdown(value: controller.videoQualityMode.value, items: controller.videoQualityModeOptions, onChanged: (v) { if (v != null) controller.videoQualityMode.value = v; }))),
+          const SizedBox(height: Spacing.small),
+          _fieldRow('Format', Obx(() => MacDropdown(value: controller.format.value, items: controller.formatOptions, onChanged: (v) { if (v != null) controller.format.value = v; }))),
+          const SizedBox(height: Spacing.small),
+          _fieldRow('Codec', Obx(() => MacDropdown(value: controller.codec.value, items: controller.codecOptions, onChanged: (v) { if (v != null) controller.codec.value = v; }))),
         ],
       ),
     );
@@ -162,131 +148,76 @@ class SettingsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCardHeader(Icons.memory, 'Advanced'),
-          const SizedBox(height: 16),
+          const SizedBox(height: Spacing.medium),
           const Text(
             'Custom yt-dlp Path',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Obx(
-                  () => MacTextField(
-                    hintText: 'C:/Tools/yt-dlp.exe',
-                    controller: TextEditingController(
-                      text: controller.customYtDlp.value,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              MacButton(
-                text: 'Browse...',
-                onPressed: () async {
-                  final file = await openFile(
-                    acceptedTypeGroups: [
-                      XTypeGroup(label: 'exe', extensions: ['exe']),
-                    ],
-                  );
-                  if (file != null) {
-                    controller.customYtDlp.value = file.path;
-                  }
-                },
-              ),
-            ],
+          const SizedBox(height: Spacing.small),
+          _fieldRow(
+            'yt-dlp',
+            Obx(() => MacTextField(hintText: 'C:/Tools/yt-dlp.exe', controller: TextEditingController(text: controller.customYtDlp.value))),
+            trailing: MacButton(
+              text: 'Browse...',
+              onPressed: () async {
+                final file = await openFile(
+                  acceptedTypeGroups: [
+                    XTypeGroup(label: 'exe', extensions: ['exe']),
+                  ],
+                );
+                if (file != null) {
+                  controller.customYtDlp.value = file.path;
+                }
+              },
+            ),
           ),
-          const SizedBox(height: 4),
-          Obx(
-            () => Row(
-              children: [
-                Icon(
-                  controller.customYtDlp.value.trim().isEmpty
-                      ? Icons.check_circle_outline
-                      : Icons.info_outline,
-                  size: 14,
+          const SizedBox(height: Spacing.small),
+          Obx(() => Text(
+                controller.customYtDlp.value.trim().isEmpty
+                    ? 'Leave blank to use the bundled yt-dlp.'
+                    : 'Custom yt-dlp is active.',
+                style: TextStyle(
+                  fontSize: 11,
                   color: controller.customYtDlp.value.trim().isEmpty
                       ? AppColors.success
                       : AppColors.primary,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  controller.customYtDlp.value.trim().isEmpty
-                      ? 'Leave blank to use the bundled yt-dlp.'
-                      : 'Custom yt-dlp is active.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: controller.customYtDlp.value.trim().isEmpty
-                        ? AppColors.success
-                        : AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
+              )),
+          const SizedBox(height: Spacing.medium),
           const Text(
             'Custom FFmpeg Path',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Obx(
-                  () => MacTextField(
-                    hintText: '/usr/local/bin/ffmpeg',
-                    controller: TextEditingController(
-                      text: controller.customFfmpeg.value,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              MacButton(
-                text: 'Browse...',
-                onPressed: () async {
-                  final file = await openFile(
-                    acceptedTypeGroups: [
-                      XTypeGroup(label: 'exe', extensions: ['exe']),
-                    ],
-                  );
-                  if (file != null) {
-                    controller.customFfmpeg.value = file.path;
-                  }
-                },
-              ),
-            ],
+          const SizedBox(height: Spacing.small),
+          _fieldRow(
+            'ffmpeg',
+            Obx(() => MacTextField(hintText: '/usr/local/bin/ffmpeg', controller: TextEditingController(text: controller.customFfmpeg.value))),
+            trailing: MacButton(
+              text: 'Browse...',
+              onPressed: () async {
+                final file = await openFile(
+                  acceptedTypeGroups: [
+                    XTypeGroup(label: 'exe', extensions: ['exe']),
+                  ],
+                );
+                if (file != null) {
+                  controller.customFfmpeg.value = file.path;
+                }
+              },
+            ),
           ),
-          const SizedBox(height: 4),
-          Obx(
-            () => Row(
-              children: [
-                Icon(
-                  controller.customFfmpeg.value.trim().isEmpty
-                      ? Icons.check_circle_outline
-                      : Icons.info_outline,
-                  size: 14,
+          const SizedBox(height: Spacing.small),
+          Obx(() => Text(
+                controller.customFfmpeg.value.trim().isEmpty
+                    ? 'Leave blank to use the bundled FFmpeg.'
+                    : 'Custom FFmpeg is active.',
+                style: TextStyle(
+                  fontSize: 11,
                   color: controller.customFfmpeg.value.trim().isEmpty
                       ? AppColors.success
                       : AppColors.primary,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  controller.customFfmpeg.value.trim().isEmpty
-                      ? 'Leave blank to use the bundled FFmpeg.'
-                      : 'Custom FFmpeg is active.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: controller.customFfmpeg.value.trim().isEmpty
-                        ? AppColors.success
-                        : AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+              )),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -389,6 +320,34 @@ class SettingsPage extends StatelessWidget {
   }
 
   // Helpers
+  Widget _fieldRow(String label, Widget control, {Widget? trailing, String? subtitle}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.xsmall),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                if (subtitle != null)
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          const SizedBox(width: Spacing.medium),
+          Expanded(child: control),
+          if (trailing != null) ...[
+            const SizedBox(width: Spacing.small),
+            trailing,
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildCardHeader(IconData icon, String title) {
     // Removed bottom border - card header uses spacing only now
     return Container(
