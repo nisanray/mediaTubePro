@@ -379,7 +379,7 @@ class DownloadRepositoryImpl {
     }
 
     final qSanitized = q.replaceAll(' ', '_');
-    var decorated = '${displayName}_$qSanitized_$appTag$ext';
+    var decorated = '${displayName}_${qSanitized}_${appTag}${ext}';
     return decorated;
   }
 }

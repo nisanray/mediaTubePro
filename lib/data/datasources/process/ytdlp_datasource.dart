@@ -42,7 +42,7 @@ class YtDlpDatasource {
       '--ignore-errors',
       '--no-colors',
       '-o',
-      '$outputFolder/${filenameStem}_$safeQualityLabel_$safeAppName.%(ext)s',
+      '$outputFolder/${filenameStem}_${safeQualityLabel}_${safeAppName}.%(ext)s',
     ];
 
     if (extractAudio) {
