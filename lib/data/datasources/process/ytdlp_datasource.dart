@@ -29,7 +29,9 @@ class YtDlpDatasource {
     final safeQualityLabel = _sanitizeFilenamePart(qualityLabel);
     final safeAppName = _sanitizeFilenamePart(_appName);
     final safeOutputName = _sanitizeFilenamePart(outputNameOverride ?? '');
-    final filenameStem = safeOutputName.isNotEmpty ? safeOutputName : '%(title)s';
+    final filenameStem = safeOutputName.isNotEmpty
+        ? safeOutputName
+        : '%(title)s';
     List<String> args = [
       '--print-json',
       '--no-warnings',

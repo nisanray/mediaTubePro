@@ -367,7 +367,8 @@ class DownloadRepositoryImpl {
     final q = qualityLabel.trim().isEmpty ? 'Unknown' : qualityLabel.trim();
 
     // Prefer the requested output name for display if provided.
-    final displayName = (outputNameOverride != null && outputNameOverride.trim().isNotEmpty)
+    final displayName =
+        (outputNameOverride != null && outputNameOverride.trim().isNotEmpty)
         ? outputNameOverride.trim()
         : name;
 

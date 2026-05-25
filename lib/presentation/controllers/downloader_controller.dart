@@ -116,7 +116,8 @@ class DownloaderController extends GetxController {
       singleVideoOnly: isSingle,
       metadata: {
         'linkDetection': detectionMeta,
-        if (requestedOutputName != null) 'requestedOutputName': requestedOutputName.trim(),
+        if (requestedOutputName != null)
+          'requestedOutputName': requestedOutputName.trim(),
       },
     );
 
