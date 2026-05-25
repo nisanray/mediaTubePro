@@ -30,6 +30,7 @@ class DownloadRepositoryImpl {
     String qualityLabel, {
     bool extractAudio = false,
     bool singleVideoOnly = true,
+    String? outputNameOverride,
   }) async* {
     DownloadTask currentTask = initialTask.copyWith(
       status: DownloadStatus.downloading,
@@ -53,6 +54,7 @@ class DownloadRepositoryImpl {
       qualityLabel: qualityLabel,
       extractAudio: extractAudio,
       singleVideoOnly: singleVideoOnly,
+      outputNameOverride: outputNameOverride,
     );
 
     await for (final line in outputStream) {
@@ -103,7 +105,11 @@ class DownloadRepositoryImpl {
                 decoded.containsKey('destination')) {
               final rawFname = decoded['filename'] ?? decoded['destination'];
               final base = rawFname.toString().split('/').last.split('\\').last;
-              final decorated = _decorateFilename(base, qualityLabel);
+              final decorated = _decorateFilename(
+                base,
+                qualityLabel,
+                outputNameOverride: outputNameOverride,
+              );
               currentTask = currentTask.copyWith(filename: decorated);
               if (!singleVideoOnly &&
                   playlistTracker.updateActiveItem(
@@ -202,13 +208,21 @@ class DownloadRepositoryImpl {
         final raw = destMatch.namedGroup('filename')!;
         final base = raw.split('/').last.split('\\').last;
         currentTask = currentTask.copyWith(
-          filename: _decorateFilename(base, qualityLabel),
+          filename: _decorateFilename(
+            base,
+            qualityLabel,
+            outputNameOverride: outputNameOverride,
+          ),
           logPath: logPath,
         );
         if (!singleVideoOnly &&
             playlistTracker.updateActiveItem(
               (item) => item.copyWith(
-                filename: _decorateFilename(base, qualityLabel),
+                filename: _decorateFilename(
+                  base,
+                  qualityLabel,
+                  outputNameOverride: outputNameOverride,
+                ),
                 status: DownloadStatus.downloading,
               ),
             )) {
@@ -255,7 +269,11 @@ class DownloadRepositoryImpl {
           final raw = mergeMatch.namedGroup('filename')!;
           final base = raw.split('/').last.split('\\').last;
           currentTask = currentTask.copyWith(
-            filename: _decorateFilename(base, qualityLabel),
+            filename: _decorateFilename(
+              base,
+              qualityLabel,
+              outputNameOverride: outputNameOverride,
+            ),
             status: DownloadStatus.merging,
             progress: 1.0,
             speed: 'Merging...',
@@ -335,7 +353,11 @@ class DownloadRepositoryImpl {
     _datasource.cancel(forceKill: forceKill);
   }
 
-  String _decorateFilename(String baseFilename, String qualityLabel) {
+  String _decorateFilename(
+    String baseFilename,
+    String qualityLabel, {
+    String? outputNameOverride,
+  }) {
     // Preserve extension
     final dot = baseFilename.lastIndexOf('.');
     final name = dot > 0 ? baseFilename.substring(0, dot) : baseFilename;
@@ -344,9 +366,14 @@ class DownloadRepositoryImpl {
     // Clean quality label for filename safety
     final q = qualityLabel.trim().isEmpty ? 'Unknown' : qualityLabel.trim();
 
+    // Prefer the requested output name for display if provided.
+    final displayName = (outputNameOverride != null && outputNameOverride.trim().isNotEmpty)
+        ? outputNameOverride.trim()
+        : name;
+
     // Avoid double-appending if already contains app name
     final appTag = 'MediaTube';
-    var decorated = '$name [$q] - $appTag$ext';
+    var decorated = '$displayName [$q] - $appTag$ext';
     return decorated;
   }
 }

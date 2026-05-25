@@ -11,6 +11,9 @@ import 'settings_controller.dart';
 import '../../../data/datasources/process/ytdlp_datasource.dart';
 import '../../../data/repositories/download_repository_impl.dart';
 
+// Choice for duplicate-task prompt when adding a URL already in the queue.
+enum _DuplicateTaskChoice { skip, redownload, rename }
+
 class DownloaderController extends GetxController {
   static bool persistenceEnabled = true;
 
@@ -91,12 +94,30 @@ class DownloaderController extends GetxController {
       'detectedAt': DateTime.now().toIso8601String(),
     };
 
+    final duplicateTask = _findTaskByUrl(normalizedUrl);
+    String? requestedOutputName;
+    if (duplicateTask != null) {
+      final duplicateChoice = await _promptDuplicateTaskChoice(duplicateTask);
+      if (duplicateChoice == _DuplicateTaskChoice.skip) {
+        return;
+      }
+      if (duplicateChoice == _DuplicateTaskChoice.rename) {
+        requestedOutputName = await _promptRenameOutputName();
+        if (requestedOutputName == null || requestedOutputName.trim().isEmpty) {
+          return;
+        }
+      }
+    }
+
     final newTask = DownloadTask(
       id: const Uuid().v4(),
       url: normalizedUrl,
       status: DownloadStatus.pending,
       singleVideoOnly: isSingle,
-      metadata: {'linkDetection': detectionMeta},
+      metadata: {
+        'linkDetection': detectionMeta,
+        if (requestedOutputName != null) 'requestedOutputName': requestedOutputName.trim(),
+      },
     );
 
     downloadQueue.insert(0, newTask);
@@ -138,6 +159,73 @@ class DownloaderController extends GetxController {
     );
   }
 
+  Future<_DuplicateTaskChoice?> _promptDuplicateTaskChoice(
+    DownloadTask duplicateTask,
+  ) async {
+    return Get.dialog<_DuplicateTaskChoice>(
+      AlertDialog(
+        title: const Text('Video already exists'),
+        content: Text(
+          'A download with this URL already exists in the queue:\n\n${duplicateTask.filename}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: _DuplicateTaskChoice.skip),
+            child: const Text('Skip'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: _DuplicateTaskChoice.redownload),
+            child: const Text('Redownload'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: _DuplicateTaskChoice.rename),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Future<String?> _promptRenameOutputName() {
+    final renameController = TextEditingController();
+    return Get.dialog<String>(
+      AlertDialog(
+        title: const Text('Rename output file'),
+        content: TextField(
+          controller: renameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Enter a custom file name',
+          ),
+          onSubmitted: (value) => Get.back(result: value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: renameController.text.trim()),
+            child: const Text('Use Name'),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  DownloadTask? _findTaskByUrl(String url) {
+    final normalized = url.trim();
+    if (normalized.isEmpty) return null;
+    for (final task in downloadQueue) {
+      if (task.url.trim() == normalized) {
+        return task;
+      }
+    }
+    return null;
+  }
+
   void _startDownload(DownloadTask task) {
     final settingsController = Get.isRegistered<SettingsController>()
         ? Get.find<SettingsController>()
@@ -163,6 +251,7 @@ class DownloaderController extends GetxController {
         'Probing the video quality';
     final qualityFormat = _resolveQualityFormat(qualityLabel, qualityMode);
     final extractAudio = qualityLabel == 'Audio Only';
+    final outputNameOverride = task.metadata?['requestedOutputName'] as String?;
 
     final sub = repository
         .executeDownload(
@@ -172,6 +261,7 @@ class DownloaderController extends GetxController {
           qualityLabel,
           extractAudio: extractAudio,
           singleVideoOnly: task.singleVideoOnly,
+          outputNameOverride: outputNameOverride,
         )
         .listen(
           (updatedTask) {

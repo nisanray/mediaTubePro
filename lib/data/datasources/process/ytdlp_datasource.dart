@@ -23,10 +23,13 @@ class YtDlpDatasource {
     required String qualityLabel,
     bool extractAudio = false,
     bool singleVideoOnly = true,
+    String? outputNameOverride,
   }) async* {
     Process? startedProcess;
     final safeQualityLabel = _sanitizeFilenamePart(qualityLabel);
     final safeAppName = _sanitizeFilenamePart(_appName);
+    final safeOutputName = _sanitizeFilenamePart(outputNameOverride ?? '');
+    final filenameStem = safeOutputName.isNotEmpty ? safeOutputName : '%(title)s';
     List<String> args = [
       '--print-json',
       '--no-warnings',
@@ -35,7 +38,7 @@ class YtDlpDatasource {
       '--ignore-errors',
       '--no-colors',
       '-o',
-      '$outputFolder/%(title)s [$safeAppName] [$safeQualityLabel].%(ext)s',
+      '$outputFolder/$filenameStem [$safeAppName] [$safeQualityLabel].%(ext)s',
     ];
 
     if (extractAudio) {
