@@ -110,7 +110,13 @@ class DownloadRepositoryImpl {
                 qualityLabel,
                 outputNameOverride: outputNameOverride,
               );
-              currentTask = currentTask.copyWith(filename: decorated);
+              // Attach format and quality metadata for UI
+              final dotIdx = base.lastIndexOf('.');
+              final ext = dotIdx > 0 ? base.substring(dotIdx + 1) : '';
+              final meta = Map<String, dynamic>.from(currentTask.metadata ?? {});
+              meta['format'] = ext.isNotEmpty ? ext : meta['format'];
+              meta['quality'] = qualityLabel;
+              currentTask = currentTask.copyWith(filename: decorated, metadata: meta);
               if (!singleVideoOnly &&
                   playlistTracker.updateActiveItem(
                     (item) => item.copyWith(
@@ -238,6 +244,10 @@ class DownloadRepositoryImpl {
         final percentStr = progMatch.namedGroup('percent') ?? '0';
         final speed = progMatch.namedGroup('speed') ?? '--';
         final eta = progMatch.namedGroup('eta') ?? '--';
+        final sizeStr = progMatch.namedGroup('size') ?? '';
+
+        final meta = Map<String, dynamic>.from(currentTask.metadata ?? {});
+        if (sizeStr.isNotEmpty) meta['size'] = sizeStr;
 
         currentTask = currentTask.copyWith(
           progress: (double.tryParse(percentStr) ?? 0.0) / 100.0,
@@ -245,6 +255,7 @@ class DownloadRepositoryImpl {
           eta: eta,
           status: DownloadStatus.downloading,
           logPath: logPath,
+          metadata: meta,
         );
         if (!singleVideoOnly &&
             playlistTracker.updateActiveItem(
@@ -268,17 +279,24 @@ class DownloadRepositoryImpl {
         if (mergeMatch != null) {
           final raw = mergeMatch.namedGroup('filename')!;
           final base = raw.split('/').last.split('\\').last;
+          final decorated = _decorateFilename(
+            base,
+            qualityLabel,
+            outputNameOverride: outputNameOverride,
+          );
+          final dotIdx = base.lastIndexOf('.');
+          final ext = dotIdx > 0 ? base.substring(dotIdx + 1) : '';
+          final meta = Map<String, dynamic>.from(currentTask.metadata ?? {});
+          if (ext.isNotEmpty) meta['format'] = ext;
+          meta['quality'] = qualityLabel;
           currentTask = currentTask.copyWith(
-            filename: _decorateFilename(
-              base,
-              qualityLabel,
-              outputNameOverride: outputNameOverride,
-            ),
+            filename: decorated,
             status: DownloadStatus.merging,
             progress: 1.0,
             speed: 'Merging...',
             eta: '--',
             logPath: logPath,
+            metadata: meta,
           );
         } else {
           currentTask = currentTask.copyWith(
