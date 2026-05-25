@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../core/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/binary_locator.dart';
+import '../../../core/utils/filename_utils.dart';
 import '../../../domain/entities/download_task.dart';
 import '../../controllers/downloader_controller.dart';
 // settings_controller import removed; use Settings in sidebar
@@ -513,7 +514,7 @@ class DownloaderPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.filename,
+                  prettyFilename(item.filename),
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 13,

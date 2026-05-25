@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/filename_utils.dart';
 import '../../../domain/entities/download_task.dart';
 import '../../controllers/downloader_controller.dart';
 import 'widgets/playlist_item_tile.dart';
@@ -30,7 +31,7 @@ class DownloadDetailsPage extends StatelessWidget {
         title: Obx(() {
           final task = _resolveTask(ctrl, initialTask);
           return Text(
-            task?.filename ?? 'Download Details',
+            task != null ? prettyFilename(task.filename) : 'Download Details',
             style: const TextStyle(color: AppColors.onSurface),
           );
         }),
@@ -48,7 +49,7 @@ class DownloadDetailsPage extends StatelessWidget {
           child: ListView(
             children: [
               Text(
-                task.filename,
+                prettyFilename(task.filename),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: Spacing.small),

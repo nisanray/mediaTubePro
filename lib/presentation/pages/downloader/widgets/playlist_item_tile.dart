@@ -5,6 +5,7 @@ import '../download_details_page.dart';
 import '../../../../domain/entities/download_task.dart';
 import '../../../controllers/downloader_controller.dart';
 import '../../../../core/theme/spacing.dart';
+import '../../../../core/utils/filename_utils.dart';
 
 class PlaylistItemTile extends StatelessWidget {
   const PlaylistItemTile({super.key, required this.task});
@@ -30,7 +31,7 @@ class PlaylistItemTile extends StatelessWidget {
         child: ListTile(
           dense: true,
           title: Text(
-            task.filename,
+            prettyFilename(task.filename),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
